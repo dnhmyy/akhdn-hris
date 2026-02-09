@@ -1,0 +1,44 @@
+services:
+  # 1. Database: MySQL
+  db:
+    image: mysql:8.0
+    container_name: hris_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: hris
+      MYSQL_USER: hris_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306" # Buka jika butuh akses phpMyAdmin di CasaOS/Luar
+
+  # 2. Application: Flask + Gunicorn
+  app:
+    build: .
+    container_name: hris_app
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: hris_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: hris
+      DB_PORT: 3306
+      SECRET_KEY: ${SECRET_KEY}
+    ports:
+      - "5000:5000"
+
+  # 3. Remote Access: Cloudflare Tunnel
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: hris_tunnel
+    restart: always
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - app
+
+volumes:
+  mysql_data:

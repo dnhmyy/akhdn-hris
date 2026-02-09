@@ -1,0 +1,6 @@
+mysql-connector-python
+python-dotenv
+flask
+werkzeug
+pandas
+openpyxl

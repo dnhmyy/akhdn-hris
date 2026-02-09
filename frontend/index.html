@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RotiKebanggaan</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+
+<body class="bg-light">
+  <!-- Login Section (Visible by default if not logged in) -->
+  <div id="loginSection" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="assets/logo.png" alt="RotiKebanggaan Logo" class="login-logo-img">
+        <h2 class="login-title">RotiKebanggaan</h2>
+        <p class="login-subtitle">Silakan login untuk mengakses sistem HRIS</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label><i class="fas fa-user"></i> Username</label>
+          <input type="text" id="loginUsername" required placeholder="Masukkan username">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Password</label>
+          <input type="password" id="loginPassword" required placeholder="Masukkan password">
+        </div>
+        <button type="submit" class="btn-login">Login Sekarang</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App Content (Hidden until login) -->
+  <div id="mainApp" class="hidden">
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <h1 class="logo">
+          <img src="assets/logo.png" alt="Logo" class="header-logo-img">
+          <span class="logo-text">RotiKebanggaan</span>
+        </h1>
+        <div class="user-info" id="headerUserInfo">
+          <span id="displayUsername">Admin</span>
+          <button class="btn-logout" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
+          <li><a href="#employees" class="nav-link">Karyawan</a></li>
+          <li><a href="#attendance" class="nav-link">Absensi</a></li>
+          <li><a href="#reports" class="nav-link">Laporan</a></li>
+          <li><a href="#devices" class="nav-link">Mesin Absensi</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <main class="main">
+      <div class="container">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section">
+          <h2 class="section-title">Overview Absensi Hari Ini</h2>
+
+          <!-- Summary Stats -->
+          <div class="summary-stats">
+            <div class="stat-card">
+              <div class="stat-label">Total Karyawan</div>
+              <div class="stat-value" id="totalEmployees">0</div>
+              <a href="#employees" class="stat-link"
+                onclick="document.querySelector('.nav-link[href=\'#employees\']').click()">Lihat Daftar →</a>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Hadir Hari Ini</div>
+              <div class="stat-value" id="presentToday">0</div>
+              <div class="stat-desc">Dari <span id="totalForToday">0</span> karyawan aktif</div>
+            </div>
+          </div>
+
+          <!-- Branch Cards -->
+          <h3 class="section-subtitle">Status per Cabang</h3>
+          <div class="cards-grid" id="dashboardCards">
+            <!-- Cards akan di-generate otomatis -->
+          </div>
+        </section>
+
+        <!-- Employees Section -->
+        <section id="employees" class="section hidden">
+          <div class="section-header">
+            <h2 class="section-title">Daftar Karyawan</h2>
+            <div class="filters">
+              <input type="text" id="searchEmployeeName" class="filter-date" placeholder="Cari Nama...">
+              <select id="filterEmployeeBranch" class="filter-select">
+                <option value="">Semua Cabang</option>
+                <!-- Options filled by JS -->
+              </select>
+              <button class="btn-primary" onclick="openAddEmployeeModal()">+ Tambah Karyawan</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="col-no">No</th>
+                  <th class="col-id" onclick="handleSort('id')" style="cursor: pointer;">ID <span id="sortId">↕</span>
+                  </th>
+                  <th class="col-name" onclick="handleSort('name')" style="cursor: pointer;">Nama <span
+                      id="sortName">↕</span></th>
+                  <th onclick="handleSort('position')" style="cursor: pointer;">Jabatan <span id="sortPosition">↕</span>
+                  </th>
+                  <th onclick="handleSort('department')" style="cursor: pointer;">Departemen <span
+                      id="sortDept">↕</span>
+                  </th>
+                  <th>Shift</th>
+                  <th onclick="handleSort('branch')" style="cursor: pointer;">Cabang <span id="sortBranch">↕</span></th>
+                  <th class="col-status" onclick="handleSort('status')" style="cursor: pointer;">Status <span
+                      id="sortStatus">↕</span></th>
+                  <th class="col-actions">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="employeesTableBody">
+                <!-- Data akan diisi JavaScript -->
+                <tr>
+                  <td colspan="9" style="text-align: center; padding: 2rem;">
+                    Memuat data karyawan...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div class="pagination-container" id="employeePagination">
+            <!-- Buttons filled by JS -->
+          </div>
+        </section>
+
+        <!-- Attendance Section -->
+        <section id="attendance" class="section hidden">
+          <div class="section-header">
+            <h2 class="section-title">Riwayat Absensi + Shift Compliance</h2>
+            <div class="filters">
+              <input type="text" id="searchAttendance" class="filter-date" placeholder="Cari Nama/ID..."
+                style="width: 200px;">
+              <select class="filter-select" id="branchFilter">
+                <option value="">Semua Cabang</option>
+                <!-- Options diisi JavaScript -->
+              </select>
+              <input type="date" class="filter-date" id="dateFilter" value="" oninput="handleDateInputDisplay(this)" />
+              <button class="btn-primary" onclick="loadAttendance()">Filter</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th width="50">No</th>
+                  <th>Tanggal</th>
+                  <th>ID</th>
+                  <th>Nama</th>
+                  <th>Cabang</th>
+                  <th>Shift Masuk</th>
+                  <th>Shift Keluar</th>
+                  <th>Check-In</th>
+                  <th>Check-Out</th>
+                  <th>Keterlambatan</th>
+                  <th>Lembur</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr>
+                  <td colspan="11" style="text-align: center; padding: 2rem;">
+                    Pilih tanggal dan cabang, lalu klik Filter
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="section hidden">
+          <!-- Tata Letak Filter & Judul: 2 Baris (2x2 Grid) -->
+          <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
+            <!-- Baris 1: Judul Laporan (Kiri) | Tombol Aksi (Kanan) -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h2 class="section-title" style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--primary);">
+                Laporan Bulanan + Lembur & Telat</h2>
+              <div class="report-actions">
+                <button class="btn-primary" onclick="loadMonthlyReport()">Tampilkan</button>
+                <button class="btn-secondary" onclick="exportReport()">Export Excel</button>
+              </div>
+            </div>
+
+            <!-- Baris 2: Pencarian & Cabang (Kiri) | Tanggal (Kanan) -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="text" id="searchReport" class="filter-date" placeholder="Cari Nama/ID..."
+                  style="width: 200px;">
+                <select class="filter-select" id="reportBranch">
+                  <option value="">Semua Cabang</option>
+                  <!-- Branches diisi JavaScript -->
+                </select>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">Dari:</span>
+                  <input type="date" class="filter-date" id="reportStartDate" title="Tanggal Mulai"
+                    oninput="handleDateInputDisplay(this)" />
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">Sampai:</span>
+                  <input type="date" class="filter-date" id="reportEndDate" title="Tanggal Selesai"
+                    oninput="handleDateInputDisplay(this)" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Stats -->
+          <div class="summary-stats" id="reportSummary">
+            <div class="stat-card">
+              <div class="stat-label">Total Karyawan</div>
+              <div class="stat-value" id="reportTotalEmployees">0</div>
+              <div class="stat-desc">Dalam laporan</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Hadir</div>
+              <div class="stat-value" id="reportTotalPresent">0</div>
+              <div class="stat-desc">Hari kerja</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Lembur</div>
+              <div class="stat-value" id="reportTotalOvertime">0</div>
+              <div class="stat-desc">jam</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Telat</div>
+              <div class="stat-value" id="reportTotalLate">0</div>
+              <div class="stat-desc">menit</div>
+            </div>
+          </div>
+
+          <!-- Detailed Report Table -->
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th width="50">No</th>
+                  <th>Tanggal</th>
+                  <th>ID</th>
+                  <th>Nama</th>
+                  <th>Cabang</th>
+                  <th>Shift Masuk</th>
+                  <th>Shift Keluar</th>
+                  <th>Check-In</th>
+                  <th>Check-Out</th>
+                  <th>Keterlambatan</th>
+                  <th>Lembur</th>
+                </tr>
+              </thead>
+              <tbody id="reportTableBody">
+                <tr>
+                  <td colspan="12" style="text-align: center; padding: 2rem;">
+                    Pilih bulan dan cabang, lalu klik Tampilkan
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Branch Summary -->
+          <h3 class="section-subtitle">Ringkasan per Cabang</h3>
+          <div class="cards-grid" id="branchSummaryCards">
+            <!-- Cards akan diisi JavaScript -->
+          </div>
+        </section>
+
+        <!-- Mesin Absensi Section -->
+        <section id="devices" class="section hidden">
+          <div class="section-header">
+            <h2 class="section-title">Monitoring Mesin Absensi</h2>
+            <button class="btn-primary" onclick="syncAllDevices()">Sync Semua Mesin</button>
+          </div>
+          <div class="cards-grid" id="devicesCards">
+            <!-- Device cards diisi JavaScript -->
+            <div class="card">
+              <div class="card-content">
+                <p class="card-label">Mesin Absensi Sorrento</p>
+                <h3 class="card-value" style="color: #10b981;">ONLINE</h3>
+                <p class="card-desc">Last Sync: -</p>
+              </div>
+              <div class="card-icon">
+                <i class="fas fa-fingerprint"></i>
+              </div>
+            </div>
+            <!-- 5 card lainnya -->
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Modal Tambah/Edit Karyawan -->
+    <div id="employeeModal" class="modal hidden">
+      <div class="modal-content">
+        <h3 class="modal-title" id="modalTitle">Tambah Karyawan Baru</h3>
+        <form id="employeeForm">
+          <input type="hidden" id="employeeId" name="id">
+          <div class="form-group">
+            <label>ID Karyawan</label>
+            <input type="text" name="id" id="inputId" required placeholder="" disabled>
+            <small>ID tidak bisa diubah</small>
+          </div>
+          <div class="form-group">
+            <label>Nama Lengkap</label>
+            <input type="text" name="name" required placeholder="">
+          </div>
+          <div class="form-group">
+            <label>Jabatan</label>
+            <input type="text" name="position" placeholder="">
+          </div>
+          <div class="form-group">
+            <label>Departemen</label>
+            <input type="text" name="department" placeholder="">
+          </div>
+          <div class="form-group">
+            <label>Cabang</label>
+            <select name="branch_id" required>
+              <option value="">Pilih Cabang</option>
+              <!-- Diisi JavaScript -->
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Jam Masuk</label>
+              <input type="time" name="shift_start" value="09:00" required>
+            </div>
+            <div class="form-group">
+              <label>Jam Pulang</label>
+              <input type="time" name="shift_end" value="17:00" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tanggal Mulai Kerja</label>
+              <input type="date" name="start_date" placeholder="Pilih tanggal" oninput="handleDateInputDisplay(this)">
+            </div>
+            <div class="form-group">
+              <label>Durasi Kontrak</label>
+              <select name="contract_duration_months">
+                <option value="">Permanent</option>
+                <option value="3">3 Bulan</option>
+                <option value="6">6 Bulan</option>
+                <option value="12">12 Bulan (1 Tahun)</option>
+                <option value="24">24 Bulan (2 Tahun)</option>
+                <option value="36">36 Bulan (3 Tahun)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="workDurationGroup" style="display: none;">
+            <label>Lama Bekerja</label>
+            <input type="text" id="workDurationDisplay" readonly
+              style="background-color: #f3f4f6; color: var(--text-muted);">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="is_active">
+              <option value="1">Aktif</option>
+              <option value="0">Nonaktif</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Batal</button>
+            <button type="submit" class="btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Detail Laporan -->
+    <div id="reportDetailModal" class="modal hidden">
+      <div class="modal-content" style="max-width: 800px;">
+        <h3 class="modal-title">Detail Laporan Karyawan</h3>
+        <div id="reportDetailContent">
+          <!-- Detail akan diisi JavaScript -->
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeReportModal()">Tutup</button>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End #mainApp -->
+
+  <!-- Toast Notification - di tengah layar -->
+  <div id="toast" class="toast hidden">
+    <span id="toastIcon" class="toast-icon"></span>
+    <span id="toastMessage" class="toast-message"></span>
+  </div>
+
+  <!-- Confirm Modal - konfirmasi aksi -->
+  <div id="confirmModal" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <p id="confirmMessage" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-secondary" id="confirmCancel">Batal</button>
+        <button type="button" class="btn-primary" id="confirmOk">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <p>RotiKebanggaan © 2026 | Sistem Absensi & Lembur</p>
+    </div>
+  </footer>
+
+  <!-- Load JavaScript -->
+  <script src="js/config.js"></script>
+  <script src="js/main.js"></script>
+</body>
+
+</html>
