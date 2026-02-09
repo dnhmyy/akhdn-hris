@@ -6,13 +6,13 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: hris
-      MYSQL_USER: hris_user
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "${DB_PORT}:3306"
 
   # 2. Application Backend: Flask + Gunicorn
   app:
@@ -22,11 +22,11 @@ services:
     depends_on:
       - db
     environment:
-      DB_HOST: db
-      DB_USER: hris_user
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: hris
-      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
       SECRET_KEY: ${SECRET_KEY}
     # Port 5000 tidak perlu diekspos ke luar (host), 
     # hanya diakses oleh Nginx lewat network internal Docker.
@@ -52,11 +52,11 @@ services:
     depends_on:
       - db
     environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
+      PMA_HOST: ${DB_HOST}
+      PMA_PORT: ${DB_PORT}
       PMA_ARBITRARY: 1
     ports:
-      - "8080:80"
+      - "${PMA_PORT_MAP}:80"
 
   # 5. Remote Access: Cloudflare Tunnel
   tunnel:
