@@ -44,7 +44,21 @@ services:
     ports:
       - "80:80"
 
-  # 4. Remote Access: Cloudflare Tunnel
+  # 4. Database Management: phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: hris_phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    ports:
+      - "8080:80"
+
+  # 5. Remote Access: Cloudflare Tunnel
   tunnel:
     image: cloudflare/cloudflared:latest
     container_name: hris_tunnel
