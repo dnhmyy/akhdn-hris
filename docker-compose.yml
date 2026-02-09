@@ -28,10 +28,8 @@ services:
       DB_NAME: ${DB_NAME}
       DB_PORT: ${DB_PORT}
       SECRET_KEY: ${SECRET_KEY}
-    # Port 5000 tidak perlu diekspos ke luar (host), 
-    # hanya diakses oleh Nginx lewat network internal Docker.
 
-    # 3. Web Server: Nginx
+  # 3. Web Server: Nginx
   web:
     image: nginx:stable-alpine
     container_name: hris_nginx
