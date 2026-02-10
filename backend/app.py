@@ -137,7 +137,9 @@ def attendance_push():
     }
     """
     data = request.json
-
+    print(f"DEBUG: Received push request from {request.remote_addr}")
+    # print(f"DEBUG: Data: {data}") # Uncomment for full data log
+    
     device_id = data.get('device_id')
     device_key = data.get('device_key')
 
@@ -150,6 +152,7 @@ def attendance_push():
     valid_devices = {r['id']: (r.get('device_key') or '') for r in rows if r.get('device_key')}
 
     if not device_id or device_id not in valid_devices or valid_devices[device_id] != device_key:
+        print(f"DEBUG: Unauthorized device attempt: ID={device_id}, Key={device_key}")
         conn.close()
         return jsonify({"error": "Unauthorized device"}), 401
 
@@ -158,6 +161,10 @@ def attendance_push():
         # Cari karyawan: device_pin atau id
         cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE device_pin = %s OR id = %s', (record['pin'], record['pin']))
         employee = cursor.fetchone()
+
+        if not employee:
+            print(f"DEBUG: Employee not found for PIN: {record['pin']}")
+            continue
 
         if employee:
             employee_id = employee['id']
@@ -188,7 +195,9 @@ def attendance_push():
                     check_out = VALUES(check_out),
                     overtime_minutes = VALUES(overtime_minutes)
                 ''', (employee_id, date, time, overtime))
-    
+            
+            print(f"DEBUG: Processed record for {employee_id} on {date} {time} (status: {record['status']})")
+
     conn.commit()
     conn.close()
     
