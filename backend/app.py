@@ -207,6 +207,88 @@ def attendance_push():
     return jsonify({"message": f"{len(data['records'])} records processed"}), 200
 
 
+    return jsonify(devices)
+
+
+# --- ADMS Protocol Implementation (Solution X105 / ZKTeco) ---
+
+def parse_attlog(data):
+    logs = []
+    lines = data.strip().split('\n')
+    for line in lines:
+        parts = line.split('\t')
+        if len(parts) >= 2:
+            logs.append({
+                'pin': parts[0],
+                'timestamp': parts[1],
+                'status': int(parts[3]) if len(parts) > 3 else 0,
+                'verification': int(parts[2]) if len(parts) > 2 else 1
+            })
+    return logs
+
+@app.route('/iclock/cdata', methods=['POST', 'GET'])
+def adms_cdata():
+    sn = request.args.get('SN')
+    table = request.args.get('table')
+    
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT id FROM attendance_devices WHERE id = %s', (sn,))
+    device = cursor.fetchone()
+    
+    if not device:
+        conn.close()
+        return "Unauthorized", 401
+
+    if request.method == 'POST' and table == 'ATTLOG':
+        try:
+            raw_data = request.data.decode('utf-8')
+            logs = parse_attlog(raw_data)
+            
+            for log in logs:
+                cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE device_pin = %s OR id = %s', (log['pin'], log['pin']))
+                employee = cursor.fetchone()
+                
+                if employee:
+                    employee_id = employee['id']
+                    timestamp = log['timestamp']
+                    date_part = timestamp.split()[0]
+                    time_part = timestamp.split()[1]
+                    
+                    status = log['status'] 
+                    
+                    if status == 0: # Check-in
+                        late = max(0, calculate_minutes_diff(time_part, employee['shift_start']))
+                        cursor.execute('''
+                            INSERT INTO attendance (employee_id, date, check_in, late_minutes)
+                            VALUES (%s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE check_in = VALUES(check_in), late_minutes = VALUES(late_minutes)
+                        ''', (employee_id, date_part, time_part, late))
+                    else: # Check-out
+                        overtime = max(0, calculate_minutes_diff(time_part, employee['shift_end']))
+                        cursor.execute('''
+                            INSERT INTO attendance (employee_id, date, check_out, overtime_minutes)
+                            VALUES (%s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE check_out = VALUES(check_out), overtime_minutes = VALUES(overtime_minutes)
+                        ''', (employee_id, date_part, time_part, overtime))
+
+            cursor.execute('UPDATE attendance_devices SET last_sync = NOW() WHERE id = %s', (sn,))
+            conn.commit()
+            conn.close()
+            return "OK"
+            
+        except Exception as e:
+            print(f"ADMS Error: {e}")
+            conn.close()
+            return "ERROR"
+
+    conn.close()
+    return "OK"
+
+@app.route('/iclock/getrequest', methods=['GET'])
+def adms_getrequest():
+    return "OK"
+
 # GET /api/attendance-devices - Daftar mesin absensi (untuk halaman monitoring)
 @app.route('/api/attendance-devices', methods=['GET'])
 @login_required
