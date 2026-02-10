@@ -198,6 +198,9 @@ def attendance_push():
             
             print(f"DEBUG: Processed record for {employee_id} on {date} {time} (status: {record['status']})")
 
+    # Update Last Sync untuk mesin ini
+    cursor.execute('UPDATE attendance_devices SET last_sync = NOW() WHERE id = %s', (device_id,))
+    
     conn.commit()
     conn.close()
     
