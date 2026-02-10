@@ -658,6 +658,34 @@ body {
 }
 
 /* Buttons */
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-logout,
+.btn-login,
+.btn-edit,
+.btn-deactivate,
+.btn-activate,
+button {
+  transition: all 0.2s cubic-bezier(0.15, 0, 0.15, 1);
+}
+
+/* Animasi klik (press effect) */
+.btn-primary:active,
+.btn-secondary:active,
+.btn-danger:active,
+.btn-logout:active,
+.btn-login:active,
+.btn-edit:active,
+.btn-deactivate:active,
+.btn-activate:active,
+.btn-delete:active,
+.btn-view:active,
+button:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
 .btn-primary {
   background: var(--primary);
   color: white;

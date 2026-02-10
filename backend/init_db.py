@@ -84,9 +84,6 @@ def init_database():
 
     # Insert data contoh untuk employees (branch_id harus ada di tabel branches)
     employees = [
-        ('EMP-001', 'Redzskid', 'Pentester', 'Security', 1, 'sorrento', '09:00', '17:00'),
-        ('EMP-002', 'Jane Doe', 'HR Manager', 'HR', 1, 'beryl', '08:00', '16:00'),
-        ('EMP-003', 'John Smith', 'Developer', 'IT', 1, 'downtown', '10:00', '18:00'),
     ]
     cursor.executemany('INSERT IGNORE INTO employees (id, name, position, department, is_active, branch_id, shift_start, shift_end) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)', employees)
 

@@ -124,7 +124,7 @@ def attendance_push():
     """
     Format data dari mesin absensi:
     {
-        "device_id": "MESIN-SORRENTO-001",
+        "device_id": "CKEB223560955",  # ID Mesin P9 (sesuai database)
         "device_key": "kunci_rahasia_mesin",
         "records": [
             {
