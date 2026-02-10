@@ -10,7 +10,7 @@
 </head>
 
 <body class="bg-light">
-  <!-- Login Section (Visible by default if not logged in) -->
+  <!-- Login Section -->
   <div id="loginSection" class="login-overlay">
     <div class="login-card">
       <div class="login-header">
@@ -32,7 +32,7 @@
     </div>
   </div>
 
-  <!-- Main App Content (Hidden until login) -->
+  <!-- Main App Content -->
   <div id="mainApp" class="hidden">
     <!-- Header -->
     <header class="header">
@@ -57,7 +57,7 @@
           <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
           <li><a href="#employees" class="nav-link">Karyawan</a></li>
           <li><a href="#attendance" class="nav-link">Absensi</a></li>
-          <li><a href="#reports" class="nav-link">Laporan</a></li>
+          <li><a href="#reports" class="nav-link">Attendance</a></li>
           <li><a href="#devices" class="nav-link">Mesin Absensi</a></li>
         </ul>
       </div>
@@ -145,7 +145,7 @@
         <!-- Attendance Section -->
         <section id="attendance" class="section hidden">
           <div class="section-header">
-            <h2 class="section-title">Riwayat Absensi + Shift Compliance</h2>
+            <h2 class="section-title">Laporan Riwayat Absensi</h2>
             <div class="filters">
               <input type="text" id="searchAttendance" class="filter-date" placeholder="Cari Nama/ID..."
                 style="width: 200px;">
@@ -192,7 +192,7 @@
             <!-- Baris 1: Judul Laporan (Kiri) | Tombol Aksi (Kanan) -->
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <h2 class="section-title" style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--primary);">
-                Laporan Bulanan + Lembur & Telat</h2>
+                Laporan Attendance</h2>
               <div class="report-actions">
                 <button class="btn-primary" onclick="loadMonthlyReport()">Tampilkan</button>
                 <button class="btn-secondary" onclick="exportReport()">Export Excel</button>
@@ -293,7 +293,7 @@
             <!-- Device cards diisi JavaScript -->
             <div class="card">
               <div class="card-content">
-                <p class="card-label">Mesin Absensi Sorrento</p>
+                <p class="card-label">Mesin Absensi P9</p>
                 <h3 class="card-value" style="color: #10b981;">ONLINE</h3>
                 <p class="card-desc">Last Sync: -</p>
               </div>
@@ -340,11 +340,11 @@
           <div class="form-row">
             <div class="form-group">
               <label>Jam Masuk</label>
-              <input type="time" name="shift_start" value="09:00" required>
+              <input type="time" name="shift_start" value="06:00" required>
             </div>
             <div class="form-group">
               <label>Jam Pulang</label>
-              <input type="time" name="shift_end" value="17:00" required>
+              <input type="time" name="shift_end" value="15:00" required>
             </div>
           </div>
           <div class="form-row">
@@ -405,7 +405,7 @@
     <span id="toastMessage" class="toast-message"></span>
   </div>
 
-  <!-- Confirm Modal - konfirmasi aksi -->
+  <!-- Confirm Modal - konfirmasi action button -->
   <div id="confirmModal" class="confirm-overlay hidden">
     <div class="confirm-box">
       <p id="confirmMessage" class="confirm-message"></p>
@@ -418,7 +418,7 @@
 
   <footer class="footer">
     <div class="container">
-      <p>RotiKebanggaan © 2026 | Sistem Absensi & Lembur</p>
+      <p>RotiKebanggaan © 2026 | DnnTech</p>
     </div>
   </footer>
 
