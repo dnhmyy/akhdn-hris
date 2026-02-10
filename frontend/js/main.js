@@ -856,6 +856,14 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Event listener untuk tab Mesin Absensi
+    const devicesLink = document.querySelector('a[href="#devices"]');
+    if (devicesLink) {
+        devicesLink.addEventListener('click', function () {
+            setTimeout(fetchDevices, 100);
+        });
+    }
+
     // Load data awal jika di dashboard
     if (!window.location.hash || window.location.hash === '#dashboard') {
         setTimeout(fetchDashboardStats, 500);
@@ -929,6 +937,65 @@ function viewBranchDetail(branchId) {
     const branch = HRIS_CONFIG.branches.find(b => b.id === branchId);
     if (!branch) return;
     showToast(`Fitur detail cabang ${branch.name} sedang kami kembangkan. Pantau terus ya!`, 'info');
+}
+
+// ========== MESIN ABSENSI (Monitoring) ==========
+let devicesData = [];
+
+async function fetchDevices() {
+    try {
+        const response = await fetch(`${API_BASE}/attendance-devices`);
+        if (!response.ok) {
+            if (response.status === 401) return;
+            throw new Error('Gagal memuat daftar mesin');
+        }
+        devicesData = await response.json();
+        renderDevicesCards();
+        if (typeof HRIS_DOMAIN !== 'undefined') {
+            const el = document.getElementById('devicesDomainDisplay');
+            if (el) el.textContent = HRIS_DOMAIN;
+        }
+    } catch (error) {
+        console.error('Gagal mengambil data mesin absensi:', error);
+        showToast('Tidak bisa memuat daftar mesin. Silakan coba lagi.', 'error');
+        renderDevicesCards(); // render empty state
+    }
+}
+
+function renderDevicesCards() {
+    const container = document.getElementById('devicesCards');
+    if (!container) return;
+
+    if (!devicesData || devicesData.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">Belum ada mesin absensi terdaftar. Tambahkan di database (template: CKEB223560955).</p>';
+        return;
+    }
+
+    container.innerHTML = devicesData.map(dev => {
+        const status = (dev.status || 'active').toLowerCase() === 'active' ? 'ONLINE' : (dev.status || 'Unknown');
+        const statusColor = status === 'ONLINE' ? '#10b981' : 'var(--text-muted)';
+        const lastSync = dev.last_sync ? dev.last_sync.replace('T', ' ').slice(0, 19) : '-';
+        const branchName = getBranchName(dev.branch_id);
+        return `
+            <div class="card">
+                <div class="card-content">
+                    <p class="card-label">${dev.device_name || dev.id} ${dev.serial_no ? '(' + dev.serial_no + ')' : ''}</p>
+                    <h3 class="card-value" style="color: ${statusColor};">${status}</h3>
+                    <p class="card-desc">Cabang: ${branchName}</p>
+                    <p class="card-desc">Last Sync: ${lastSync}</p>
+                    ${dev.device_ip ? `<p class="card-desc" style="font-size: 0.8rem;">Server: ${dev.device_ip}</p>` : ''}
+                </div>
+                <div class="card-icon">
+                    <i class="fas fa-fingerprint"></i>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function syncAllDevices() {
+    showToast('Memuat ulang daftar mesin...', 'info');
+    fetchDevices();
 }
 
 document.addEventListener('DOMContentLoaded', function () {

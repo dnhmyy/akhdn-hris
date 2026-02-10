@@ -1,14 +1,26 @@
 from flask import Flask, jsonify, request, send_from_directory, send_file, session, redirect, url_for
 import mysql.connector
 import os
+import base64
+import uuid
 from werkzeug.security import check_password_hash
 from functools import wraps
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load env: .env dulu, lalu .env.local dengan override=True agar local menang (DB_HOST=localhost)
+_env_dir = os.path.dirname(os.path.abspath(__file__))
+_root_dir = os.path.dirname(_env_dir)
+load_dotenv(os.path.join(_env_dir, '.env'))
+load_dotenv(os.path.join(_root_dir, '.env'))
+load_dotenv(os.path.join(_env_dir, '.env.local'), override=True)
+load_dotenv(os.path.join(_root_dir, '.env.local'), override=True)
 
 app = Flask(__name__, static_folder='../frontend')
 app.secret_key = os.getenv('SECRET_KEY', 'super-secret-key-roti-kebanggaan-2026')
+
+# Folder simpan foto dari mesin absensi
+UPLOAD_ATTENDANCE = os.path.join(os.path.dirname(__file__), 'uploads', 'attendance')
+os.makedirs(UPLOAD_ATTENDANCE, exist_ok=True)
 
 # ============================================
 # FUNGSI BANTUAN UNTUK DATABASE & AUTH
@@ -125,25 +137,23 @@ def attendance_push():
     }
     """
     data = request.json
-    
-    # 1. Autentikasi mesin
+
     device_id = data.get('device_id')
     device_key = data.get('device_key')
-    
-    # Validasi mesin (bisa dari database atau config)
-    valid_devices = {
-        "MESIN-SORRENTO-001": "key_sorrento_001",
-        "MESIN-BERYL-001": "key_beryl_001",
-        # ... 6 cabang
-    }
-    
-    if device_id not in valid_devices or valid_devices[device_id] != device_key:
-        return jsonify({"error": "Unauthorized device"}), 401
-    
-    # 2. Process each record
+
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-    
+
+    # Validasi mesin dari database (attendance_devices)
+    cursor.execute('SELECT id, device_key FROM attendance_devices WHERE status = %s', ('active',))
+    rows = cursor.fetchall()
+    valid_devices = {r['id']: (r.get('device_key') or '') for r in rows if r.get('device_key')}
+
+    if not device_id or device_id not in valid_devices or valid_devices[device_id] != device_key:
+        conn.close()
+        return jsonify({"error": "Unauthorized device"}), 401
+
+    # Process each record
     for record in data.get('records', []):
         # Cari karyawan: device_pin atau id
         cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE device_pin = %s OR id = %s', (record['pin'], record['pin']))
@@ -183,6 +193,31 @@ def attendance_push():
     conn.close()
     
     return jsonify({"message": f"{len(data['records'])} records processed"}), 200
+
+
+# GET /api/attendance-devices - Daftar mesin absensi (untuk halaman monitoring)
+@app.route('/api/attendance-devices', methods=['GET'])
+@login_required
+def get_attendance_devices():
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('''
+        SELECT id, branch_id, device_name, device_ip, last_sync, status,
+               serial_no, mac_address, model, platform, manufacturer
+        FROM attendance_devices
+        WHERE status = %s
+        ORDER BY branch_id, device_name
+    ''', ('active',))
+    devices = cursor.fetchall()
+    conn.close()
+    # Format datetime untuk last_sync
+    for d in devices:
+        if d.get('last_sync'):
+            d['last_sync'] = d['last_sync'].strftime('%Y-%m-%d %H:%M:%S') if hasattr(d['last_sync'], 'strftime') else str(d['last_sync'])
+        else:
+            d['last_sync'] = None
+    return jsonify(devices)
+
 
 # --- Karyawan ---
 @app.route('/api/employees/<string:employee_id>', methods=['PUT'])
@@ -557,7 +592,7 @@ def monthly_report():
             a.overtime_minutes
         FROM employees e
         JOIN attendance a ON e.id = a.employee_id 
-        WHERE a.date BETWEEN ? AND ?
+        WHERE a.date BETWEEN %s AND %s
           AND e.is_active = 1
     '''
     
@@ -609,7 +644,7 @@ def monthly_report():
             COUNT(CASE WHEN a.late_minutes > 0 THEN 1 END) as total_late_count
         FROM employees e
         LEFT JOIN attendance a ON e.id = a.employee_id 
-            AND a.date BETWEEN ? AND ?
+            AND a.date BETWEEN %s AND %s
         WHERE e.is_active = 1
     '''
     
@@ -692,7 +727,7 @@ def export_report():
             a.overtime_minutes
         FROM employees e
         JOIN attendance a ON e.id = a.employee_id 
-        WHERE a.date BETWEEN ? AND ?
+        WHERE a.date BETWEEN %s AND %s
           AND e.is_active = 1
     '''
     
@@ -755,9 +790,11 @@ if __name__ == '__main__':
     print("\n" + "="*50)
     print("🚀 SERVER HRIS BERJALAN")
     print("="*50)
-    print("📊 Dashboard: http://localhost:5000")
-    print("👥 API Karyawan: http://localhost:5000/api/employees")
-    print("🏢 API Cabang: http://localhost:5000/api/branches")
+    print("📊 Dashboard (local): http://localhost:5000")
+    print("🌐 Production: https://hris.tamvan.web.id")
+    print("👥 API Karyawan: /api/employees")
+    print("🏢 API Cabang: /api/branches")
+    print("📱 API Push Mesin: /api/attendance/push")
     print("="*50 + "\n")
     
     app.run(debug=True, port=5000)

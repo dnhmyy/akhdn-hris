@@ -4,7 +4,12 @@ import os
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 
-load_dotenv()
+_env_dir = os.path.dirname(os.path.abspath(__file__))
+_root_dir = os.path.dirname(_env_dir)
+load_dotenv(os.path.join(_env_dir, '.env'))
+load_dotenv(os.path.join(_root_dir, '.env'))
+load_dotenv(os.path.join(_env_dir, '.env.local'), override=True)
+load_dotenv(os.path.join(_root_dir, '.env.local'), override=True)
 
 def init_database():
     # Koneksi ke database MySQL
@@ -100,7 +105,9 @@ def init_database():
         hashed_pw = generate_password_hash('admin123')
         cursor.execute('INSERT INTO users (username, password, role) VALUES (%s, %s, %s)', ('admin', hashed_pw, 'admin'))
 
-    # Tabel dan kolom untuk mesin absensi
+    # Tabel mesin absensi (info lengkap per mesin).
+    # device_key = password rahasia per mesin (diisi kamu, dipakai saat mesin/middleware push ke API).
+    # device_ip = domain (misal hris.tamvan.web.id) atau IP, untuk referensi; API pakai domain.
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance_devices (
             id VARCHAR(50) PRIMARY KEY,
@@ -108,9 +115,29 @@ def init_database():
             device_name VARCHAR(255),
             device_ip VARCHAR(50),
             last_sync TIMESTAMP,
-            status VARCHAR(50) DEFAULT 'active'
+            status VARCHAR(50) DEFAULT 'active',
+            serial_no VARCHAR(100),
+            mac_address VARCHAR(50),
+            model VARCHAR(100),
+            platform VARCHAR(100),
+            manufacturer VARCHAR(100),
+            device_key VARCHAR(255)
         )
     ''')
+
+    # Kolom tambahan jika tabel sudah ada (migrasi)
+    for col, defn in [
+        ('serial_no', 'VARCHAR(100)'),
+        ('mac_address', 'VARCHAR(50)'),
+        ('model', 'VARCHAR(100)'),
+        ('platform', 'VARCHAR(100)'),
+        ('manufacturer', 'VARCHAR(100)'),
+        ('device_key', 'VARCHAR(255)'),
+    ]:
+        try:
+            cursor.execute(f'ALTER TABLE attendance_devices ADD COLUMN {col} {defn}')
+        except mysql.connector.Error:
+            pass
 
     try:
         cursor.execute('ALTER TABLE employees ADD COLUMN device_pin VARCHAR(50)')
@@ -121,20 +148,42 @@ def init_database():
     except mysql.connector.Error:
         pass  # Kolom sudah ada
 
-    # Data mesin contoh
+    # Satu mesin patokan (X105). Cabang lain: copy row ini, ubah id/serial_no/branch_id/device_key.
+    # - id = serial number mesin (dari menu Info Mesin)
+    # - device_key = password rahasia yang kamu buat; isi sama di middleware/mesin saat push ke API
+    # - device_ip = domain server (hris.tamvan.web.id) atau IP, untuk referensi saja
+    # API push: POST https://hris.tamvan.web.id/api/attendance/push  body: device_id, device_key, records[]
     devices = [
-        ('MESIN-SORRENTO-001', 'sorrento', 'Mesin Absensi Lobi', '192.168.1.100'),
-        ('MESIN-BERYL-001', 'beryl', 'Mesin HRD', '192.168.2.100'),
-        ('MESIN-DOWNTOWN-001', 'downtown', 'Mesin Lobi', '192.168.3.100'),
-        ('MESIN-GREENLAKE-001', 'greenlake', 'Mesin Lobi', '192.168.4.100'),
-        ('MESIN-MKG-001', 'mkg', 'Mesin Lobi', '192.168.5.100'),
-        ('MESIN-GRANDINDONESIA-001', 'grandindonesia', 'Mesin Lobi', '192.168.6.100'),
+        # Template mesin X105 (Solution) - ganti branch_id & device_key per cabang
+        (
+            'CKEB223560955',           # id = serial number mesin
+            'p9',                # branch_id (ganti untuk cabang lain)
+            'X105 Fingerprint',        # device_name
+            'hris.tamvan.web.id',     # device_ip = domain (bukan IP)
+            'ganti_dengan_key_rahasia', # device_key = isi sendiri, rahasia per mesin
+            'CKEB223560955',           # serial_no
+            '00:17:61:12:7e:04',       # mac_address
+            'X105',                     # model
+            'ZLM60_TFT',                # platform
+            'Solution',                 # manufacturer
+        ),
     ]
-    for device in devices:
+    for d in devices:
         cursor.execute('''
-            INSERT IGNORE INTO attendance_devices (id, branch_id, device_name, device_ip)
-            VALUES (%s, %s, %s, %s)
-        ''', device)
+            INSERT INTO attendance_devices 
+            (id, branch_id, device_name, device_ip, device_key, serial_no, mac_address, model, platform, manufacturer)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            branch_id = VALUES(branch_id),
+            device_name = VALUES(device_name),
+            device_ip = VALUES(device_ip),
+            device_key = VALUES(device_key),
+            serial_no = VALUES(serial_no),
+            mac_address = VALUES(mac_address),
+            model = VALUES(model),
+            platform = VALUES(platform),
+            manufacturer = VALUES(manufacturer)
+        ''', d)
 
     conn.commit()
     conn.close()

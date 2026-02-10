@@ -1,5 +1,6 @@
 // js/config.js - Konfigurasi RotiKebanggaan
 const API_BASE = '/api'; // Relatif - otomatis pakai domain yang sama (dev & production)
+const HRIS_DOMAIN = 'hris.tamvan.web.id'; // Domain untuk API push mesin absensi
 const HRIS_CONFIG = {
   branches: [
     { id: 'sorrento', name: 'Sorrento', colorClass: 'sorrento' },
