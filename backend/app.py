@@ -228,28 +228,37 @@ def update_employee(employee_id):
     cursor = conn.cursor(dictionary=True)
     
     # Ambil data yang dikirim, hanya update field yang dikirim
-    allowed_fields = ['name', 'position', 'department', 'branch_id', 'shift_start', 'shift_end', 'is_active', 
-                      'start_date', 'contract_duration_months', 'contract_end_date']
+    allowed_fields = [
+        'name', 'position', 'department', 'branch_id', 
+        'shift_start', 'shift_end', 'is_active', 
+        'start_date', 'contract_duration_months', 'contract_end_date'
+    ]
+    
     update_data = {}
     for field in allowed_fields:
         if field in data:
-            update_data[field] = data[field]
+            val = data[field]
+            # Convert empty strings to None for date fields to avoid MySQL errors
+            if field in ['start_date', 'contract_end_date'] and val == '':
+                val = None
+            update_data[field] = val
     
     if not update_data:
         return jsonify({'error': 'No data to update'}), 400
     
-    set_clause = ', '.join([f"{field}=%s" for field in update_data.keys()])
-    values = list(update_data.values())
-    values.append(employee_id)
-    
     try:
-        cursor.execute(f'''
-            UPDATE employees 
-            SET {set_clause}
-            WHERE id=%s
-        ''', values)
+        # Gunakan list comprehension untuk membangun query dinamis
+        set_clause = ', '.join([f"{field} = %s" for field in update_data.keys()])
+        params = list(update_data.values())
+        params.append(employee_id)
+        
+        sql = f"UPDATE employees SET {set_clause} WHERE id = %s"
+        cursor.execute(sql, params)
+        
         conn.commit()
         return jsonify({'message': 'Employee updated successfully'}), 200
+    except mysql.connector.Error as err:
+        return jsonify({'error': f'Database error: {err}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -422,13 +431,20 @@ def add_employee():
     try:
         # Hitung contract_end_date jika ada start_date dan contract_duration_months
         contract_end_date = None
-        if data.get('start_date') and data.get('contract_duration_months'):
+        start_date = data.get('start_date')
+        if not start_date: # Handle empty string or None
+            start_date = None
+            
+        if start_date and data.get('contract_duration_months'):
             from datetime import datetime, timedelta
-            start = datetime.strptime(data['start_date'], '%Y-%m-%d')
-            # Approximate: 1 month = 30 days
-            months = int(data['contract_duration_months'])
-            end = start + timedelta(days=months * 30)
-            contract_end_date = end.strftime('%Y-%m-%d')
+            try:
+                start = datetime.strptime(start_date, '%Y-%m-%d')
+                # Approximate: 1 month = 30 days
+                months = int(data['contract_duration_months'])
+                end = start + timedelta(days=months * 30)
+                contract_end_date = end.strftime('%Y-%m-%d')
+            except ValueError:
+                start_date = None # Invalid format, treat as None
         
         cursor.execute('''
             INSERT INTO employees (id, name, position, department, branch_id, shift_start, shift_end, 
@@ -442,7 +458,7 @@ def add_employee():
             data.get('branch_id', 'sorrento'),
             data.get('shift_start', '09:00'),
             data.get('shift_end', '17:00'),
-            data.get('start_date'),
+            start_date,
             data.get('contract_duration_months'),
             contract_end_date
         ))
@@ -783,9 +799,14 @@ def export_report():
 # JALANKAN SERVER
 # ============================================
 if __name__ == '__main__':
-    # Cek apakah database sudah ada
-    if not os.path.exists('database.db'):
-        print("⚠️  Database belum ada! Jalankan init_db.py dulu")
+    # Cek koneksi database MySQL
+    try:
+        conn = get_db()
+        conn.ping(reconnect=True)
+        conn.close()
+        print("✅ Database connection successful")
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
     
     print("\n" + "="*50)
     print("🚀 SERVER HRIS BERJALAN")
@@ -797,4 +818,4 @@ if __name__ == '__main__':
     print("📱 API Push Mesin: /api/attendance/push")
     print("="*50 + "\n")
     
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
