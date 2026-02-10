@@ -1,4 +1,4 @@
-/* RotiKebanggaan - Minimal & Kalem */
+/* RotiKebanggaan - UI */
 :root {
   --primary: #001f18;
   /* Extra Dark Midnight Green */
@@ -214,23 +214,17 @@ body {
   margin: 1.5rem 0 1rem;
 }
 
-/* Summary Stats */
-#dashboard .summary-stats {
+.summary-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
+  width: 100%;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .summary-stats {
     grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .summary-stats {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -238,8 +232,8 @@ body {
   background: var(--bg-card);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  padding: 1.75rem;
-  border-radius: 24px;
+  padding: 1rem;
+  border-radius: 16px;
   text-align: center;
   border: 1px solid var(--border);
   transition: all 0.2s ease-in-out;

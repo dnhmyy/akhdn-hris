@@ -35,7 +35,10 @@ def init_database():
             is_active TINYINT(1) DEFAULT 1,
             branch_id VARCHAR(50),
             shift_start VARCHAR(10) DEFAULT '09:00',
-            shift_end VARCHAR(10) DEFAULT '17:00'
+            shift_end VARCHAR(10) DEFAULT '17:00',
+            start_date DATE,
+            contract_duration_months INT,
+            contract_end_date DATE
         )
     ''')
 
@@ -143,10 +146,17 @@ def init_database():
         cursor.execute('ALTER TABLE employees ADD COLUMN device_pin VARCHAR(50)')
     except mysql.connector.Error:
         pass  # Kolom sudah ada
-    try:
-        cursor.execute('ALTER TABLE employees ADD COLUMN device_fingerprint_index INT')
-    except mysql.connector.Error:
-        pass  # Kolom sudah ada
+
+    # Migrasi kolom durasi kontrak & start_date
+    for col, defn in [
+        ('start_date', 'DATE'),
+        ('contract_duration_months', 'INT'),
+        ('contract_end_date', 'DATE'),
+    ]:
+        try:
+            cursor.execute(f'ALTER TABLE employees ADD COLUMN {col} {defn}')
+        except mysql.connector.Error:
+            pass
 
     # Satu mesin patokan (X105). Cabang lain: copy row ini, ubah id/serial_no/branch_id/device_key.
     # - id = serial number mesin (dari menu Info Mesin)

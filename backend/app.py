@@ -238,8 +238,8 @@ def update_employee(employee_id):
     for field in allowed_fields:
         if field in data:
             val = data[field]
-            # Convert empty strings to None for date fields to avoid MySQL errors
-            if field in ['start_date', 'contract_end_date'] and val == '':
+            # Convert empty strings to None for date/int fields to avoid MySQL errors
+            if field in ['start_date', 'contract_end_date', 'contract_duration_months'] and val == '':
                 val = None
             update_data[field] = val
     
@@ -435,12 +435,16 @@ def add_employee():
         if not start_date: # Handle empty string or None
             start_date = None
             
-        if start_date and data.get('contract_duration_months'):
+        contract_duration = data.get('contract_duration_months')
+        if contract_duration == '':
+            contract_duration = None
+
+        if start_date and contract_duration:
             from datetime import datetime, timedelta
             try:
                 start = datetime.strptime(start_date, '%Y-%m-%d')
                 # Approximate: 1 month = 30 days
-                months = int(data['contract_duration_months'])
+                months = int(contract_duration)
                 end = start + timedelta(days=months * 30)
                 contract_end_date = end.strftime('%Y-%m-%d')
             except ValueError:
@@ -459,7 +463,7 @@ def add_employee():
             data.get('shift_start', '09:00'),
             data.get('shift_end', '17:00'),
             start_date,
-            data.get('contract_duration_months'),
+            contract_duration,
             contract_end_date
         ))
         
@@ -804,18 +808,18 @@ if __name__ == '__main__':
         conn = get_db()
         conn.ping(reconnect=True)
         conn.close()
-        print("✅ Database connection successful")
+        print("Database connection successful")
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+        print(f"Database connection failed: {e}")
     
     print("\n" + "="*50)
-    print("🚀 SERVER HRIS BERJALAN")
+    print("SERVER HRIS BERJALAN")
     print("="*50)
-    print("📊 Dashboard (local): http://localhost:5000")
-    print("🌐 Production: https://hris.tamvan.web.id")
-    print("👥 API Karyawan: /api/employees")
-    print("🏢 API Cabang: /api/branches")
-    print("📱 API Push Mesin: /api/attendance/push")
+    print("Dashboard (local): http://localhost:5000")
+    print("Production: https://hris.tamvan.web.id")
+    print("API Karyawan: /api/employees")
+    print("API Cabang: /api/branches")
+    print("API Push Mesin: /api/attendance/push")
     print("="*50 + "\n")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
