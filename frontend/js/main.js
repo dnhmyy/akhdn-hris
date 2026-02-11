@@ -977,13 +977,25 @@ function renderDevicesCards() {
         const lastSync = dev.last_sync ? dev.last_sync.replace('T', ' ').slice(0, 19) : '-';
         const branchName = getBranchName(dev.branch_id);
         return `
-            <div class="card">
+            <div class="card device-card">
                 <div class="card-content">
                     <p class="card-label">${dev.device_name || dev.id} ${dev.serial_no ? '(' + dev.serial_no + ')' : ''}</p>
                     <h3 class="card-value" style="color: ${statusColor};">${status}</h3>
                     <p class="card-desc">Cabang: ${branchName}</p>
                     <p class="card-desc">Last Sync: ${lastSync}</p>
-                    ${dev.device_ip ? `<p class="card-desc" style="font-size: 0.8rem;">Server: ${dev.device_ip}</p>` : ''}
+                    ${dev.device_ip ? `<p class="card-desc" style="font-size: 0.8rem;">IP: ${dev.device_ip}</p>` : ''}
+                    
+                    <div class="device-actions" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn-secondary btn-sm" onclick="remoteSyncTime('${dev.id}')" title="Sync Jam Mesin">
+                            <i class="fas fa-clock"></i> Sync Time
+                        </button>
+                        <button class="btn-secondary btn-sm" onclick="remoteRestart('${dev.id}')" title="Restart Mesin">
+                            <i class="fas fa-redo"></i> Restart
+                        </button>
+                        <button class="btn-deactivate btn-sm" onclick="remoteClearLogs('${dev.id}')" title="Hapus Log di Mesin">
+                            <i class="fas fa-trash-alt"></i> Clear Logs
+                        </button>
+                    </div>
                 </div>
                 <div class="card-icon">
                     <i class="fas fa-fingerprint"></i>
@@ -991,6 +1003,41 @@ function renderDevicesCards() {
             </div>
         `;
     }).join('');
+}
+
+// Handler Fitur SOAP (Remote Control)
+async function remoteSyncTime(deviceId) {
+    showToast('Menyinkronkan waktu...', 'info');
+    try {
+        const res = await fetch(`${API_BASE}/devices/${deviceId}/soap/sync-time`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) showToast(data.message, 'success');
+        else showToast(data.error || 'Gagal sinkron waktu', 'error');
+    } catch (e) { showToast('Koneksi gagal', 'error'); }
+}
+
+async function remoteRestart(deviceId) {
+    const ok = await showConfirm('Apakah Anda yakin ingin merestart mesin ini?');
+    if (!ok) return;
+    showToast('Mengirim perintah restart...', 'info');
+    try {
+        const res = await fetch(`${API_BASE}/devices/${deviceId}/soap/restart`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) showToast(data.message, 'success');
+        else showToast(data.error || 'Gagal restart', 'error');
+    } catch (e) { showToast('Koneksi gagal', 'error'); }
+}
+
+async function remoteClearLogs(deviceId) {
+    const ok = await showConfirm('PERHATIAN: Ini akan menghapus SEMUA data absensi di mesin (bukan di database). Lanjutkan?');
+    if (!ok) return;
+    showToast('Menghapus log di mesin...', 'info');
+    try {
+        const res = await fetch(`${API_BASE}/devices/${deviceId}/soap/clear-logs`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) showToast(data.message, 'success');
+        else showToast(data.error || 'Gagal hapus log', 'error');
+    } catch (e) { showToast('Koneksi gagal', 'error'); }
 }
 
 function syncAllDevices() {
