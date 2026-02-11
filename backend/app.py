@@ -5,7 +5,9 @@ import base64
 import uuid
 from werkzeug.security import check_password_hash
 from functools import wraps
-from dotenv import load_dotenv
+import requests
+import re
+from datetime import datetime
 
 # Load env: .env dulu, lalu .env.local dengan override=True agar local menang (DB_HOST=localhost)
 _env_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +23,27 @@ app.secret_key = os.getenv('SECRET_KEY', 'super-secret-key-roti-kebanggaan-2026'
 # Folder simpan foto dari mesin absensi
 UPLOAD_ATTENDANCE = os.path.join(os.path.dirname(__file__), 'uploads', 'attendance')
 os.makedirs(UPLOAD_ATTENDANCE, exist_ok=True)
+
+# ============================================
+# FUNGSI BANTUAN UNTUK BIO-SDK (SOAP)
+# ============================================
+def send_soap_request(device_ip, payload):
+    """Mengirim request SOAP ke mesin absensi via HTTP port 80"""
+    url = f"http://{device_ip}/iWsService"
+    headers = {'Content-Type': 'text/xml'}
+    try:
+        response = requests.post(url, data=payload, headers=headers, timeout=10)
+        return response.text
+    except Exception as e:
+        print(f"SOAP Error ({device_ip}): {e}")
+        return None
+
+def parse_xml_tag(data, tag):
+    """Helper sederhana untuk mengambil konten di dalam tag XML (seperti parse.php di SDK)"""
+    if not data: return ""
+    pattern = f"<{tag}>(.*?)</{tag}>"
+    match = re.search(pattern, data, re.DOTALL)
+    return match.group(1) if match else ""
 
 # ============================================
 # FUNGSI BANTUAN UNTUK DATABASE & AUTH
@@ -288,6 +311,96 @@ def adms_cdata():
 @app.route('/iclock/getrequest', methods=['GET'])
 def adms_getrequest():
     return "OK"
+
+# --- SOAP Remote Management ---
+
+@app.route('/api/devices/<string:device_id>/soap/sync-time', methods=['POST'])
+@login_required
+def device_sync_time(device_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT device_ip, device_key FROM attendance_devices WHERE id = %s', (device_id,))
+    device = cursor.fetchone()
+    conn.close()
+
+    if not device or not device['device_ip']:
+        return jsonify({'error': 'Device not found or IP not set'}), 404
+
+    now = datetime.now()
+    time_str = now.strftime('%Y-%m-%d %H:%M:%S')
+    payload = f"<SetDeviceTime><ArgComKey>{device['device_key'] or 0}</ArgComKey><Arg><Value>{time_str}</Value></Arg></SetDeviceTime>"
+    
+    result = send_soap_request(device['device_ip'], payload)
+    if result and "OK" in result:
+        return jsonify({'message': 'Time synchronized successfully'}), 200
+    return jsonify({'error': 'Failed to sync time', 'details': result}), 500
+
+@app.route('/api/devices/<string:device_id>/soap/clear-logs', methods=['POST'])
+@login_required
+def device_clear_logs(device_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT device_ip, device_key FROM attendance_devices WHERE id = %s', (device_id,))
+    device = cursor.fetchone()
+    conn.close()
+
+    if not device or not device['device_ip']:
+        return jsonify({'error': 'Device not found'}), 404
+
+    payload = f"<ClearLog><ArgComKey>{device['device_key'] or 0}</ArgComKey></ClearLog>"
+    result = send_soap_request(device['device_ip'], payload)
+    if result and "OK" in result:
+        return jsonify({'message': 'Logs cleared successfully'}), 200
+    return jsonify({'error': 'Failed to clear logs', 'details': result}), 500
+
+@app.route('/api/devices/<string:device_id>/soap/restart', methods=['POST'])
+@login_required
+def device_restart(device_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT device_ip, device_key FROM attendance_devices WHERE id = %s', (device_id,))
+    device = cursor.fetchone()
+    conn.close()
+
+    if not device or not device['device_ip']:
+        return jsonify({'error': 'Device not found'}), 404
+
+    payload = f"<Restart><ArgComKey>{device['device_key'] or 0}</ArgComKey></Restart>"
+    result = send_soap_request(device['device_ip'], payload)
+    if result and "OK" in result:
+        return jsonify({'message': 'Device is restarting'}), 200
+    return jsonify({'error': 'Failed to restart device', 'details': result}), 500
+
+@app.route('/api/devices/<string:device_id>/soap/upload-user', methods=['POST'])
+@login_required
+def device_upload_user(device_id):
+    data = request.json
+    employee_id = data.get('employee_id')
+    
+    if not employee_id:
+        return jsonify({'error': 'Employee ID required'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT device_ip, device_key FROM attendance_devices WHERE id = %s', (device_id,))
+    device = cursor.fetchone()
+    
+    cursor.execute('SELECT name, device_pin FROM employees WHERE id = %s', (employee_id,))
+    employee = cursor.fetchone()
+    conn.close()
+
+    if not device or not device['device_ip']:
+        return jsonify({'error': 'Device not found'}), 404
+    if not employee:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    pin = employee['device_pin'] or employee_id
+    payload = f"<SetUserInfo><ArgComKey>{device['device_key'] or 0}</ArgComKey><Arg><PIN>{pin}</PIN><Name>{employee['name']}</Name></Arg></SetUserInfo>"
+    
+    result = send_soap_request(device['device_ip'], payload)
+    if result and "OK" in result:
+        return jsonify({'message': f'Employee {employee["name"]} uploaded to device'}), 200
+    return jsonify({'error': 'Failed to upload user', 'details': result}), 500
 
 # GET /api/attendance-devices - Daftar mesin absensi (untuk halaman monitoring)
 @app.route('/api/attendance-devices', methods=['GET'])
