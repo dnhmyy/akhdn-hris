@@ -133,6 +133,18 @@ def init_database():
         ('platform', 'VARCHAR(100)'),
         ('manufacturer', 'VARCHAR(100)'),
         ('device_key', 'VARCHAR(255)'),
+        # PUSH SDK Protocol: Stamp tracking
+        ('last_attlog_stamp', 'INT DEFAULT 0'),
+        ('last_operlog_stamp', 'INT DEFAULT 0'),
+        ('last_attphoto_stamp', 'INT DEFAULT 0'),
+        # PUSH SDK Protocol: Configuration parameters
+        ('push_delay', 'INT DEFAULT 10'),
+        ('error_delay', 'INT DEFAULT 30'),
+        ('realtime_mode', 'TINYINT DEFAULT 1'),
+        ('timezone_offset', 'INT DEFAULT 7'),
+        ('trans_times', 'VARCHAR(100) DEFAULT "00:00;14:05"'),
+        ('trans_interval', 'INT DEFAULT 1'),
+        ('trans_flag', 'TEXT DEFAULT "TransData AttLog OpLog"'),
     ]:
         try:
             cursor.execute(f'ALTER TABLE attendance_devices ADD COLUMN {col} {defn}')

@@ -252,22 +252,74 @@ def parse_attlog(data):
 
 @app.route('/iclock/cdata', methods=['POST', 'GET'])
 def adms_cdata():
+    """
+    PUSH SDK Protocol Implementation
+    Handles device handshake, configuration, and data uploads
+    """
     sn = request.args.get('SN')
+    options = request.args.get('options')
     table = request.args.get('table')
+    
+    if not sn:
+        return "ERROR: SN required", 400
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT id FROM attendance_devices WHERE id = %s', (sn,))
+    cursor.execute('''
+        SELECT id, last_attlog_stamp, last_operlog_stamp, last_attphoto_stamp,
+               push_delay, error_delay, realtime_mode, timezone_offset,
+               trans_times, trans_interval, trans_flag
+        FROM attendance_devices WHERE id = %s
+    ''', (sn,))
     device = cursor.fetchone()
     
     if not device:
         conn.close()
         return "Unauthorized", 401
 
+    # HANDSHAKE: Device requesting configuration (GET with options=all)
+    if request.method == 'GET' and options == 'all':
+        response_lines = [
+            f"GET OPTION FROM: {sn}",
+            f"ATTLOGStamp={device['last_attlog_stamp'] or 0}",
+            f"OPERLOGStamp={device['last_operlog_stamp'] or 0}",
+            f"ATTPHOTOStamp={device['last_attphoto_stamp'] or 0}",
+            f"ErrorDelay={device['error_delay'] or 30}",
+            f"Delay={device['push_delay'] or 10}",
+            f"TransTimes={device['trans_times'] or '00:00;14:05'}",
+            f"TransInterval={device['trans_interval'] or 1}",
+            f"TransFlag={device['trans_flag'] or 'TransData AttLog OpLog'}",
+            f"TimeZone={device['timezone_offset'] or 7}",
+            f"Realtime={device['realtime_mode'] or 1}",
+            "Encrypt=None",
+            "ServerVer=3.0.0",
+            "PushProtVer=2.2.14"
+        ]
+        
+        response_body = "\n".join(response_lines)
+        
+        # Update last sync time
+        cursor.execute('UPDATE attendance_devices SET last_sync = NOW() WHERE id = %s', (sn,))
+        conn.commit()
+        conn.close()
+        
+        # Return response with proper headers as per PUSH SDK spec
+        response = app.response_class(
+            response=response_body,
+            status=200,
+            mimetype='text/plain'
+        )
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    # DATA UPLOAD: Device sending attendance logs (POST with table=ATTLOG)
     if request.method == 'POST' and table == 'ATTLOG':
         try:
             raw_data = request.data.decode('utf-8')
             logs = parse_attlog(raw_data)
+            
+            max_stamp = device['last_attlog_stamp'] or 0
             
             for log in logs:
                 cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE device_pin = %s OR id = %s', (log['pin'], log['pin']))
@@ -295,22 +347,73 @@ def adms_cdata():
                             VALUES (%s, %s, %s, %s)
                             ON DUPLICATE KEY UPDATE check_out = VALUES(check_out), overtime_minutes = VALUES(overtime_minutes)
                         ''', (employee_id, date_part, time_part, overtime))
+                
+                # Track the highest stamp value
+                if 'stamp' in log and log['stamp'] > max_stamp:
+                    max_stamp = log['stamp']
 
-            cursor.execute('UPDATE attendance_devices SET last_sync = NOW() WHERE id = %s', (sn,))
+            # Update device stamps and last sync
+            cursor.execute('''
+                UPDATE attendance_devices 
+                SET last_sync = NOW(), last_attlog_stamp = %s 
+                WHERE id = %s
+            ''', (max_stamp, sn))
             conn.commit()
+            
+            # Return PUSH SDK compliant response
+            response_lines = [
+                f"GET OPTION FROM: {sn}",
+                f"ATTLOGStamp={max_stamp}",
+                f"OPERLOGStamp={device['last_operlog_stamp'] or 0}",
+                f"ATTPHOTOStamp={device['last_attphoto_stamp'] or 0}",
+                f"ErrorDelay={device['error_delay'] or 30}",
+                f"Delay={device['push_delay'] or 10}",
+                f"TransTimes={device['trans_times'] or '00:00;14:05'}",
+                f"TransInterval={device['trans_interval'] or 1}",
+                f"TransFlag={device['trans_flag'] or 'TransData AttLog OpLog'}",
+                f"TimeZone={device['timezone_offset'] or 7}",
+                f"Realtime={device['realtime_mode'] or 1}",
+                "Encrypt=None"
+            ]
+            
+            response_body = "\n".join(response_lines)
             conn.close()
-            return "OK"
+            
+            response = app.response_class(
+                response=response_body,
+                status=200,
+                mimetype='text/plain'
+            )
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Cache-Control'] = 'no-store'
+            return response
             
         except Exception as e:
             print(f"ADMS Error: {e}")
             conn.close()
-            return "ERROR"
+            return "ERROR", 500
 
+    # Default response for other requests
     conn.close()
-    return "OK"
+    response = app.response_class(
+        response="OK",
+        status=200,
+        mimetype='text/plain'
+    )
+    return response
 
 @app.route('/iclock/getrequest', methods=['GET'])
 def adms_getrequest():
+    """
+    PUSH SDK: Device polling for commands
+    Returns any pending commands for the device
+    """
+    sn = request.args.get('SN')
+    if not sn:
+        return "OK"
+    
+    # For now, return OK (no commands)
+    # Future: implement command queue for remote management
     return "OK"
 
 # --- SOAP Remote Management ---
