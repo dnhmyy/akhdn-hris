@@ -8,6 +8,7 @@ from functools import wraps
 import requests
 import re
 from datetime import datetime
+from dotenv import load_dotenv
 
 # Load env: .env dulu, lalu .env.local dengan override=True agar local menang (DB_HOST=localhost)
 _env_dir = os.path.dirname(os.path.abspath(__file__))
