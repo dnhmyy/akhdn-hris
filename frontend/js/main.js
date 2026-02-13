@@ -265,7 +265,6 @@ function renderEmployeesTable() {
           <td>${emp.department || '-'}</td>
           <td><span class="shift-badge">${emp.shift_start}–${emp.shift_end}</span></td>
           <td><span class="branch-badge ${emp.branch_id}">${getBranchName(emp.branch_id)}</span></td>
-          <td>${calculateWorkDuration(emp.start_date)}</td>
           <td><span class="status-badge ${emp.is_active ? 'status-active' : 'status-inactive'}">
               ${emp.is_active ? 'Aktif' : 'Resign'}
           </span></td>
@@ -436,8 +435,13 @@ function calculateWorkDuration(startDate) {
 function formatDate(dateString, includeWeekday = false) {
     if (!dateString) return 'dd/mm/yyyy';
 
-    // Sangat Penting: Handle format MySQL atau ISO (misal: "2024-02-13 00:00:00", "Fri, 13 Feb 2026...", atau ISO T)
-    if (dateString.includes('GMT') || dateString.includes('T') || dateString.includes(' ')) {
+    // Handle format dari DB: "2024-02-13 00:00:00" -> ambil bagian tanggal saja
+    if (typeof dateString === 'string' && dateString.includes(' ')) {
+        dateString = dateString.split(' ')[0];
+    }
+
+    // Jika formatnya ISO/GMT
+    if (typeof dateString === 'string' && (dateString.includes('T') || dateString.includes('GMT'))) {
         const d = new Date(dateString);
         if (!isNaN(d.getTime())) {
             const year = d.getFullYear();
@@ -461,8 +465,10 @@ function formatDate(dateString, includeWeekday = false) {
 
     if (includeWeekday) {
         const d = new Date(dateString);
-        const dayName = days[d.getDay()];
-        formatted = `${dayName}, ${formatted}`;
+        if (!isNaN(d.getTime())) {
+            const dayName = days[d.getDay()];
+            formatted = `${dayName}, ${formatted}`;
+        }
     }
 
     return formatted;
@@ -471,9 +477,23 @@ function formatDate(dateString, includeWeekday = false) {
 // Helper: Format tanggal ke yyyy-mm-dd untuk input type="date"
 function formatDateToYYYYMMDD(dateString) {
     if (!dateString) return '';
+
+    // Jika formatnya "2024-02-13 00:00:00", ambil bagian depannya saja
+    if (typeof dateString === 'string' && dateString.includes(' ')) {
+        const part = dateString.split(' ')[0];
+        if (part.split('-').length === 3) return part;
+    }
+
     try {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) return '';
+        if (isNaN(d.getTime())) {
+            // Fallback manual jika gagal parse
+            if (typeof dateString === 'string') {
+                const match = dateString.match(/\d{4}-\d{2}-\d{2}/);
+                return match ? match[0] : '';
+            }
+            return '';
+        }
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -791,32 +811,27 @@ function openEditEmployeeModal(employee) {
 
     // Contract fields
     const formattedStartDate = formatDateToYYYYMMDD(employee.start_date);
-    document.querySelector('input[name="start_date"]').value = formattedStartDate;
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    if (startDateInput) startDateInput.value = formattedStartDate;
     document.querySelector('select[name="contract_duration_months"]').value = employee.contract_duration_months || '';
 
-    // Hitung dan tampilkan lama bekerja
+    // Hitung dan tampilkan lama bekerja (Hidden by default as per request to restore)
     const durationGroup = document.getElementById('workDurationGroup');
-    const durationDisplay = document.getElementById('workDurationDisplay');
+    if (durationGroup) durationGroup.style.display = 'none';
 
-    if (durationGroup && durationDisplay) {
-        durationGroup.style.display = 'block';
-        durationDisplay.value = calculateWorkDuration(employee.start_date);
-    }
-
-    // Update overlay input tanggal
     if (startDateInput) {
         handleDateInputDisplay(startDateInput);
 
-        // Listener ganda: oninput (saat ketik/pilih) dan onchange (saat selesai pilih di kalender)
-        const updateSync = (e) => {
+        const syncUpdate = (e) => {
             handleDateInputDisplay(e.target);
             if (durationDisplay) {
                 durationDisplay.value = calculateWorkDuration(e.target.value);
             }
         };
 
-        startDateInput.oninput = updateSync;
-        startDateInput.onchange = updateSync;
+        // Gunakan oninput dan onchange agar benar-benar terupdate di semua browser
+        startDateInput.oninput = syncUpdate;
+        startDateInput.onchange = syncUpdate;
     }
 
     document.getElementById('employeeModal').classList.remove('hidden');
