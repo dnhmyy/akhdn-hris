@@ -74,8 +74,8 @@ body {
 }
 
 .container {
-  width: 98%;
-  max-width: 1920px;
+  width: 92%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
@@ -214,13 +214,16 @@ body {
   margin: 1.5rem 0 1rem;
 }
 
-.summary-stats,
-#reportSummary.summary-stats {
+.summary-stats {
   display: grid;
   width: 100%;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
   margin-bottom: 2rem;
+}
+
+#reportSummary.summary-stats {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 #reportSummary .stat-card {
