@@ -144,11 +144,13 @@ def init_database():
         ('timezone_offset', 'INT DEFAULT 7'),
         ('trans_times', 'VARCHAR(100) DEFAULT "00:00;14:05"'),
         ('trans_interval', 'INT DEFAULT 1'),
-        ('trans_flag', 'TEXT DEFAULT "TransData AttLog OpLog"'),
+        ('trans_flag', 'VARCHAR(255) DEFAULT "TransData AttLog OpLog"'),
     ]:
         try:
+            print(f"Adding column {col}...")
             cursor.execute(f'ALTER TABLE attendance_devices ADD COLUMN {col} {defn}')
-        except mysql.connector.Error:
+        except mysql.connector.Error as err:
+            print(f"Column {col} might already exist or error: {err}")
             pass
 
     try:
