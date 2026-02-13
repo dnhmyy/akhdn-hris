@@ -55,7 +55,7 @@ let activeReportData = [];
 let employeesCurrentPage = 1;
 let attendanceCurrentPage = 1;
 let reportCurrentPage = 1;
-const itemsPerPage = 30;
+const itemsPerPage = 50;
 let filteredEmployees = [];
 let sortColumn = 'id';
 let sortDirection = 'asc'; // 'asc' or 'desc'
@@ -628,7 +628,14 @@ function renderBranchSummaryCards(branchSummary) {
         return;
     }
 
-    container.innerHTML = branchSummary.map(branch => `
+    // Urutkan berdasarkan urutan di HRIS_CONFIG.branches
+    const sortedSummary = [...branchSummary].sort((a, b) => {
+        const indexA = HRIS_CONFIG.branches.findIndex(br => br.id === a.branch_id);
+        const indexB = HRIS_CONFIG.branches.findIndex(br => br.id === b.branch_id);
+        return indexA - indexB;
+    });
+
+    container.innerHTML = sortedSummary.map(branch => `
         <div class="card card-${branch.branch_id}">
             <div class="card-content" style="width: 100%">
                 <h3>${getBranchName(branch.branch_id)}</h3>

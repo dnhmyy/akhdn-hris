@@ -37,19 +37,19 @@
   /* Deep Teal */
   --br-beryl: #064e3b;
   /* Deep Emerald */
-  --br-downtown: #7f1d1d;
+  --br-downtown: #134e4a;
   /* Deep Maroon */
   --br-greenlake: #14532d;
   /* Deep Forest */
-  --br-mkg: #78350f;
+  --br-mkg: #134e4a;
   /* Deep Amber */
   --br-grandindonesia: #1e1b4b;
   /* Deep Indigo */
   --br-p9: #334155;
   /* Deep Slate */
-  --br-dapursolvang: #1e3a8a;
+  --br-dapursolvang: #064e3b;
   /* Deep Blue */
-  --br-pastrysolvang: #831843;
+  --br-pastrysolvang: #14532d;
   /* Deep Rose */
   --br-enchante: #312e81;
   /* Deep Violet */
@@ -74,8 +74,8 @@ body {
 }
 
 .container {
-  width: 88%;
-  max-width: 1250px;
+  width: 90%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
