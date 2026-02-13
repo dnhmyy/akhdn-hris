@@ -243,9 +243,16 @@ def adms_cdata():
             processed_count = 0
             
             for log in logs:
-                print(f"DEBUG: Processing log - PIN: {log['pin']}, Time: {log['timestamp']}, Status: {log['status']}")
-                # Cari karyawan: device_pin atau id
-                cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE device_pin = %s OR id = %s', (log['pin'], log['pin']))
+                pin_val = log['pin']
+                print(f"DEBUG: Processing log - PIN: {pin_val}, Time: {log['timestamp']}, Status: {log['status']}")
+                
+                # Cari karyawan: Cek di kolom 'id' ATAU 'device_pin'
+                # Ini mengantisipasi jika ID di mesin (PIN) adalah string numeric yang sama dengan ID di sistem
+                cursor.execute('''
+                    SELECT id, shift_start, shift_end 
+                    FROM employees 
+                    WHERE id = %s OR device_pin = %s
+                ''', (pin_val, pin_val))
                 employee = cursor.fetchone()
                 
                 if employee:
@@ -255,7 +262,7 @@ def adms_cdata():
                     time_part = timestamp.split()[1]
                     status = log['status'] 
                     
-                    print(f"DEBUG: Matched employee {employee_id} for PIN {log['pin']}")
+                    print(f"DEBUG: Matched employee {employee_id} for PIN {pin_val}")
                     
                     if status == 0: # Check-in
                         late = max(0, calculate_minutes_diff(time_part, employee['shift_start']))
@@ -853,8 +860,8 @@ def monthly_report():
         FROM employees e
         JOIN attendance a ON e.id = a.employee_id 
         WHERE a.date BETWEEN %s AND %s
-          AND e.is_active = 1
     '''
+    # REMOVED: AND e.is_active = 1 (Agar data history tetap muncul)
     
     params = [start_date, end_date]
     
@@ -905,8 +912,8 @@ def monthly_report():
         FROM employees e
         LEFT JOIN attendance a ON e.id = a.employee_id 
             AND a.date BETWEEN %s AND %s
-        WHERE e.is_active = 1
     '''
+    # REMOVED: WHERE e.is_active = 1 (Agar statistik data sejarah tetap lengkap)
     
     branch_params = [start_date, end_date]
     if branch:
@@ -988,8 +995,8 @@ def export_report():
         FROM employees e
         JOIN attendance a ON e.id = a.employee_id 
         WHERE a.date BETWEEN %s AND %s
-          AND e.is_active = 1
     '''
+    # REMOVED: AND e.is_active = 1 (Agar export data sejarah tetap lengkap)
     
     params = [start_date, end_date]
     if branch:
