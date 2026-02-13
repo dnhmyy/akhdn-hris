@@ -191,9 +191,14 @@ def adms_cdata():
     device = cursor.fetchone()
     
     if not device:
-        print(f"DEBUG: Unauthorized SN: {sn}")
-        conn.close()
-        return "Unauthorized", 401
+        # For debugging: Allow unknown SNs but log them clearly
+        print(f"DEBUG: Unknown SN attempting connection: {sn}. PLEASE REGISTER THIS SN IN THE WEB UI.")
+        # Create a mock device object so the script doesn't crash
+        device = {
+            'last_attlog_stamp': 0, 'last_operlog_stamp': 0, 'last_attphoto_stamp': 0,
+            'push_delay': 10, 'error_delay': 30, 'realtime_mode': 1, 'timezone_offset': 7,
+            'trans_times': '00:00;14:05', 'trans_interval': 1, 'trans_flag': 'TransData AttLog OpLog'
+        }
 
     # HANDSHAKE: Device requesting configuration (GET with options=all)
     if request.method == 'GET' and options == 'all':
@@ -289,34 +294,18 @@ def adms_cdata():
                     max_stamp = log['stamp']
 
             # Update device stamps and last sync
-            cursor.execute('''
-                UPDATE attendance_devices 
-                SET last_sync = NOW(), last_attlog_stamp = %s 
-                WHERE id = %s
-            ''', (max_stamp, sn))
-            conn.commit()
+            if sn in [d['id'] for d in [device] if 'id' in d]: # Only update if it's a real device in DB
+                cursor.execute('''
+                    UPDATE attendance_devices 
+                    SET last_sync = NOW(), last_attlog_stamp = %s 
+                    WHERE id = %s
+                ''', (max_stamp, sn))
+                conn.commit()
             
-            # Return PUSH SDK compliant response
-            response_lines = [
-                f"GET OPTION FROM: {sn}",
-                f"ATTLOGStamp={max_stamp}",
-                f"OPERLOGStamp={device['last_operlog_stamp'] or 0}",
-                f"ATTPHOTOStamp={device['last_attphoto_stamp'] or 0}",
-                f"ErrorDelay={device['error_delay'] or 30}",
-                f"Delay={device['push_delay'] or 10}",
-                f"TransTimes={device['trans_times'] or '00:00;14:05'}",
-                f"TransInterval={device['trans_interval'] or 1}",
-                f"TransFlag={device['trans_flag'] or 'TransData AttLog OpLog'}",
-                f"TimeZone={device['timezone_offset'] or 7}",
-                f"Realtime={device['realtime_mode'] or 1}",
-                "Encrypt=None"
-            ]
-            
-            response_body = "\n".join(response_lines)
             conn.close()
-            
+            # Return simple 'OK' as per common ADMS implementation to stop retries
             response = app.response_class(
-                response=response_body,
+                response="OK",
                 status=200,
                 mimetype='text/plain'
             )
