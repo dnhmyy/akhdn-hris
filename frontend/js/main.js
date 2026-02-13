@@ -436,15 +436,15 @@ function calculateWorkDuration(startDate) {
 function formatDate(dateString, includeWeekday = false) {
     if (!dateString) return 'dd/mm/yyyy';
 
-    // Jika formatnya ISO/GMT dari API (misal: "Fri, 13 Feb 2026 00:00:00 GMT")
-    // Ambil bagian tanggal saja
-    if (dateString.includes('GMT') || dateString.includes('T')) {
+    // Sangat Penting: Handle format MySQL atau ISO (misal: "2024-02-13 00:00:00", "Fri, 13 Feb 2026...", atau ISO T)
+    if (dateString.includes('GMT') || dateString.includes('T') || dateString.includes(' ')) {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) return dateString;
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        dateString = `${year}-${month}-${day}`;
+        if (!isNaN(d.getTime())) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            dateString = `${year}-${month}-${day}`;
+        }
     }
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -804,16 +804,19 @@ function openEditEmployeeModal(employee) {
     }
 
     // Update overlay input tanggal
-    const startDateInput = document.querySelector('input[name="start_date"]');
     if (startDateInput) {
         handleDateInputDisplay(startDateInput);
-        // Event listener untuk update real-time
-        startDateInput.oninput = (e) => {
+
+        // Listener ganda: oninput (saat ketik/pilih) dan onchange (saat selesai pilih di kalender)
+        const updateSync = (e) => {
             handleDateInputDisplay(e.target);
             if (durationDisplay) {
                 durationDisplay.value = calculateWorkDuration(e.target.value);
             }
         };
+
+        startDateInput.oninput = updateSync;
+        startDateInput.onchange = updateSync;
     }
 
     document.getElementById('employeeModal').classList.remove('hidden');
