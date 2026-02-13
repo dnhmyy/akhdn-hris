@@ -546,10 +546,25 @@ def get_attendance():
     query += ' ORDER BY a.date DESC, e.name'
 
     cursor.execute(query, params)
-    result = cursor.fetchall()
+    rows = cursor.fetchall()
+
+    attendance = []
+    for row in rows:
+        attendance.append({
+            'employee_id': row['employee_id'],
+            'name': row['name'],
+            'branch_id': row['branch_id'],
+            'shift_start': str(row['shift_start']) if row['shift_start'] else '-',
+            'shift_end': str(row['shift_end']) if row['shift_end'] else '-',
+            'check_in': str(row['check_in']) if row['check_in'] else '-',
+            'check_out': str(row['check_out']) if row['check_out'] else '-',
+            'date': str(row['date']),
+            'overtime_minutes': row['overtime_minutes'] or 0,
+            'late_minutes': row['late_minutes'] or 0
+        })
 
     conn.close()
-    return jsonify(result)
+    return jsonify(attendance)
 
 # POST: Tambah data absensi
 @app.route('/api/attendance', methods=['POST'])
@@ -790,8 +805,9 @@ def attendance_today():
                COALESCE(a.date, CURDATE()) as record_date
         FROM employees e
         LEFT JOIN attendance a ON e.id = a.employee_id AND a.date = CURDATE()
-        WHERE e.is_active = 1
-    ''')
+    '''
+    # REMOVED: WHERE e.is_active = 1 (Agar data hari ini terlihat untuk semua termasuk yang baru resign)
+    )
     
     attendance = []
     for row in cursor.fetchall():
