@@ -269,10 +269,10 @@ function renderEmployeesTable() {
               ${emp.is_active ? 'Aktif' : 'Resign'}
           </span></td>
           <td class="actions-cell">
-              <button class="btn-edit" data-id="${emp.id}" onclick="editEmployee('${emp.id}')" title="Ubah data">Edit</button>
+              <button class="btn-edit" onclick="editEmployee('${emp.id}')">Edit</button>
               ${emp.is_active ?
-            `<button class="btn-deactivate" data-id="${emp.id}" onclick="toggleEmployeeStatus('${emp.id}', false)" title="Nonaktifkan">Nonaktif</button>` :
-            `<button class="btn-activate" data-id="${emp.id}" onclick="toggleEmployeeStatus('${emp.id}', true)" title="Aktifkan">Aktif</button>`
+            `<button class="btn-deactivate" onclick="toggleEmployeeStatus('${emp.id}', false)">Nonaktif</button>` :
+            `<button class="btn-activate" onclick="toggleEmployeeStatus('${emp.id}', true)">Aktif</button>`
         }
           </td>
       </tr>
