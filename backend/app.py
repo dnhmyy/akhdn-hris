@@ -146,16 +146,22 @@ def check_auth():
 # --- ADMS Protocol Implementation (Solution X105 / ZKTeco) ---
 
 def parse_attlog(data):
+    """
+    Parses ADMS ATTLOG data format.
+    Standard format: PIN \t Timestamp \t Status \t VerifyMethod
+    Example: 1\t2026-02-13 11:30:00\t0\t1
+    """
     logs = []
     lines = data.strip().split('\n')
     for line in lines:
         parts = line.split('\t')
         if len(parts) >= 2:
             logs.append({
-                'pin': parts[0],
-                'timestamp': parts[1],
-                'status': int(parts[3]) if len(parts) > 3 else 0,
-                'verification': int(parts[2]) if len(parts) > 2 else 1
+                'pin': parts[0].strip(),
+                'timestamp': parts[1].strip(),
+                'status': int(parts[2].strip()) if len(parts) > 2 else 0, # Index 2 is Status (0=Check-in, 1=Check-out)
+                'verification': int(parts[3].strip()) if len(parts) > 3 else 1, # Index 3 is Verify Method
+                'stamp': int(parts[4].strip()) if len(parts) > 4 else 0
             })
     return logs
 
@@ -172,6 +178,8 @@ def adms_cdata():
     if not sn:
         return "ERROR: SN required", 400
     
+    print(f"DEBUG: PUSH ADMS Request - SN: {sn}, Table: {table}, Options: {options}, Method: {request.method}")
+    
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute('''
@@ -183,6 +191,7 @@ def adms_cdata():
     device = cursor.fetchone()
     
     if not device:
+        print(f"DEBUG: Unauthorized SN: {sn}")
         conn.close()
         return "Unauthorized", 401
 
@@ -226,11 +235,16 @@ def adms_cdata():
     if request.method == 'POST' and table == 'ATTLOG':
         try:
             raw_data = request.data.decode('utf-8')
+            print(f"DEBUG: Raw data from {sn}:\n{raw_data}")
             logs = parse_attlog(raw_data)
+            print(f"DEBUG: Parsed {len(logs)} logs")
             
             max_stamp = device['last_attlog_stamp'] or 0
+            processed_count = 0
             
             for log in logs:
+                print(f"DEBUG: Processing log - PIN: {log['pin']}, Time: {log['timestamp']}, Status: {log['status']}")
+                # Cari karyawan: device_pin atau id
                 cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE device_pin = %s OR id = %s', (log['pin'], log['pin']))
                 employee = cursor.fetchone()
                 
@@ -239,8 +253,9 @@ def adms_cdata():
                     timestamp = log['timestamp']
                     date_part = timestamp.split()[0]
                     time_part = timestamp.split()[1]
-                    
                     status = log['status'] 
+                    
+                    print(f"DEBUG: Matched employee {employee_id} for PIN {log['pin']}")
                     
                     if status == 0: # Check-in
                         late = max(0, calculate_minutes_diff(time_part, employee['shift_start']))
@@ -249,6 +264,7 @@ def adms_cdata():
                             VALUES (%s, %s, %s, %s)
                             ON DUPLICATE KEY UPDATE check_in = VALUES(check_in), late_minutes = VALUES(late_minutes)
                         ''', (employee_id, date_part, time_part, late))
+                        print(f"DEBUG: Inserted Check-in for {employee_id}")
                     else: # Check-out
                         overtime = max(0, calculate_minutes_diff(time_part, employee['shift_end']))
                         cursor.execute('''
@@ -256,6 +272,10 @@ def adms_cdata():
                             VALUES (%s, %s, %s, %s)
                             ON DUPLICATE KEY UPDATE check_out = VALUES(check_out), overtime_minutes = VALUES(overtime_minutes)
                         ''', (employee_id, date_part, time_part, overtime))
+                        print(f"DEBUG: Inserted Check-out for {employee_id}")
+                    processed_count += 1
+                else:
+                    print(f"DEBUG: Employee NOT FOUND for PIN: {log['pin']}")
                 
                 # Track the highest stamp value
                 if 'stamp' in log and log['stamp'] > max_stamp:
