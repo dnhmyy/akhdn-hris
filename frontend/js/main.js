@@ -668,7 +668,6 @@ function renderMonthlyReportTable(data = null) {
     tbody.innerHTML = pageData.map((record, index) => `
         <tr>
             <td>${startIndex + index + 1}</td>
-            <td>${startIndex + index + 1}</td>
             <td>${formatDate(record.date)}</td>
             <td>${record.employee_id}</td>
             <td>${record.employee_id}</td>
@@ -817,9 +816,14 @@ function openEditEmployeeModal(employee) {
     if (startDateInput) startDateInput.value = formattedStartDate;
     document.querySelector('select[name="contract_duration_months"]').value = employee.contract_duration_months || '';
 
-    // Hitung dan tampilkan lama bekerja (Hidden by default as per request to restore)
+    // Hitung dan tampilkan lama bekerja
     const durationGroup = document.getElementById('workDurationGroup');
-    if (durationGroup) durationGroup.style.display = 'none';
+    const durationDisplay = document.getElementById('workDurationDisplay');
+
+    if (durationGroup && durationDisplay) {
+        durationGroup.style.display = 'block';
+        durationDisplay.value = calculateWorkDuration(employee.start_date);
+    }
 
     if (startDateInput) {
         handleDateInputDisplay(startDateInput);
