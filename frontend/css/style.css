@@ -74,10 +74,10 @@ body {
 }
 
 .container {
-  width: 95%;
-  max-width: 1800px;
+  width: 98%;
+  max-width: 1920px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 1.5rem;
 }
 
 .hidden {
@@ -214,7 +214,8 @@ body {
   margin: 1.5rem 0 1rem;
 }
 
-.summary-stats {
+.summary-stats,
+#reportSummary.summary-stats {
   display: grid;
   width: 100%;
   grid-template-columns: repeat(4, 1fr);
@@ -222,8 +223,24 @@ body {
   margin-bottom: 2rem;
 }
 
+#reportSummary .stat-card {
+  padding: 1rem;
+  border-radius: 16px;
+  min-height: auto;
+}
+
+@media (max-width: 1024px) {
+
+  .summary-stats,
+  #reportSummary.summary-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
-  .summary-stats {
+
+  .summary-stats,
+  #reportSummary.summary-stats {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -658,34 +675,6 @@ body {
 }
 
 /* Buttons */
-.btn-primary,
-.btn-secondary,
-.btn-danger,
-.btn-logout,
-.btn-login,
-.btn-edit,
-.btn-deactivate,
-.btn-activate,
-button {
-  transition: all 0.2s cubic-bezier(0.15, 0, 0.15, 1);
-}
-
-/* Animasi klik (press effect) */
-.btn-primary:active,
-.btn-secondary:active,
-.btn-danger:active,
-.btn-logout:active,
-.btn-login:active,
-.btn-edit:active,
-.btn-deactivate:active,
-.btn-activate:active,
-.btn-delete:active,
-.btn-view:active,
-button:active {
-  transform: scale(0.95);
-  opacity: 0.8;
-}
-
 .btn-primary {
   background: var(--primary);
   color: white;

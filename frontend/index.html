@@ -7,33 +7,6 @@
   <title>RotiKebanggaan</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <style>
-    /* Nuclear Fix: Memaksa layout 4 kolom untuk report summary agar tidak menumpuk */
-    #reportSummary.summary-stats {
-      display: grid !important;
-      grid-template-columns: repeat(4, 1fr) !important;
-      gap: 1rem !important;
-      margin-bottom: 2rem !important;
-    }
-
-    #reportSummary .stat-card {
-      padding: 1rem !important;
-      border-radius: 16px !important;
-      min-height: auto !important;
-    }
-
-    @media (max-width: 1024px) {
-      #reportSummary.summary-stats {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-    }
-
-    @media (max-width: 640px) {
-      #reportSummary.summary-stats {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-    }
-  </style>
 </head>
 
 <body class="bg-light">
