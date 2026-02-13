@@ -760,7 +760,7 @@ function openEditEmployeeModal(employee) {
     document.getElementById('inputId').disabled = true; // ID tidak bisa diubah
     document.querySelector('input[name="name"]').value = employee.name || '';
     document.querySelector('input[name="position"]').value = employee.position || '';
-    document.querySelector('input[name="department"]').value = employee.department || '';
+    document.querySelector('select[name="department"]').value = employee.department || '';
 
     // Select branch
     populateBranchSelect();
