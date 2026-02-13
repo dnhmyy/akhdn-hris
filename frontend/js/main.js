@@ -436,7 +436,8 @@ function formatDate(dateString, includeWeekday = false) {
     if (!dateString) return 'dd/mm/yyyy';
 
     // Handle format dari DB: "2024-02-13 00:00:00" -> ambil bagian tanggal saja
-    if (typeof dateString === 'string' && dateString.includes(' ')) {
+    // Cek apakah formatnya YYYY-MM-DD dengan spasi (MySQL standard)
+    if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateString) && dateString.includes(' ')) {
         dateString = dateString.split(' ')[0];
     }
 
@@ -669,7 +670,6 @@ function renderMonthlyReportTable(data = null) {
         <tr>
             <td>${startIndex + index + 1}</td>
             <td>${formatDate(record.date)}</td>
-            <td>${record.employee_id}</td>
             <td>${record.employee_id}</td>
             <td>${record.name}</td>
             <td><span class="branch-badge ${record.branch_id}">${getBranchName(record.branch_id)}</span></td>
