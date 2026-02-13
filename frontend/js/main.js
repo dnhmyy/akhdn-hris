@@ -668,7 +668,9 @@ function renderMonthlyReportTable(data = null) {
     tbody.innerHTML = pageData.map((record, index) => `
         <tr>
             <td>${startIndex + index + 1}</td>
-            <td>${formatDate(record.date, true)}</td>
+            <td>${startIndex + index + 1}</td>
+            <td>${formatDate(record.date)}</td>
+            <td>${record.employee_id}</td>
             <td>${record.employee_id}</td>
             <td>${record.name}</td>
             <td><span class="branch-badge ${record.branch_id}">${getBranchName(record.branch_id)}</span></td>
