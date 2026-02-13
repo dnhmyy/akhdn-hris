@@ -74,8 +74,8 @@ body {
 }
 
 .container {
-  width: 92%;
-  max-width: 1400px;
+  width: 88%;
+  max-width: 1250px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
@@ -115,7 +115,7 @@ body {
 }
 
 .header-logo-img {
-  width: 32px;
+  width: 52px;
   height: auto;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
@@ -189,6 +189,14 @@ body {
   border-bottom-color: var(--accent);
 }
 
+.nav-link:visited {
+  color: var(--text-light);
+}
+
+.nav-link.active:visited {
+  color: var(--accent);
+}
+
 /* Main - mengembang supaya footer selalu di bawah */
 .main {
   padding: 2rem 0;
@@ -217,7 +225,7 @@ body {
 .summary-stats {
   display: grid;
   width: 100%;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   margin-bottom: 2rem;
 }

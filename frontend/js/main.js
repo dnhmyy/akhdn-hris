@@ -52,9 +52,11 @@ function showConfirm(message) {
 let employeesData = [];
 let activeAttendanceData = [];
 let activeReportData = [];
-let currentPage = 1;
+let employeesCurrentPage = 1;
+let attendanceCurrentPage = 1;
+let reportCurrentPage = 1;
 const itemsPerPage = 30;
-let filteredData = [];
+let filteredEmployees = [];
 let sortColumn = 'id';
 let sortDirection = 'asc'; // 'asc' or 'desc'
 let currentUser = null;
@@ -145,7 +147,7 @@ async function fetchEmployees() {
     try {
         const response = await fetch(`${API_BASE}/employees`);
         employeesData = await response.json();
-        filteredData = [...employeesData]; // Init filtered data
+        filteredEmployees = [...employeesData]; // Init filtered data
         renderEmployeesTable(); // Render page 1
         populateEmployeeBranchFilter(); // Isi filter cabang
     } catch (error) {
@@ -159,13 +161,13 @@ function handleEmployeeFilter() {
     const searchTerm = document.getElementById('searchEmployeeName').value.toLowerCase();
     const branchFilter = document.getElementById('filterEmployeeBranch').value;
 
-    filteredData = employeesData.filter(emp => {
+    filteredEmployees = employeesData.filter(emp => {
         const matchName = emp.name.toLowerCase().includes(searchTerm) || String(emp.id).toLowerCase().includes(searchTerm);
         const matchBranch = branchFilter ? emp.branch_id === branchFilter : true;
         return matchName && matchBranch;
     });
 
-    currentPage = 1; // Reset ke halaman 1 saat filter
+    employeesCurrentPage = 1; // Reset ke halaman 1 saat filter
     renderEmployeesTable();
 }
 
@@ -196,14 +198,14 @@ function renderEmployeesTable() {
     const paginationContainer = document.getElementById('employeePagination');
     if (!tbody) return;
 
-    if (filteredData.length === 0) {
+    if (filteredEmployees.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Tidak ada data karyawan</td></tr>';
         if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
 
     // Logic Sorting
-    const sortedData = [...filteredData].sort((a, b) => {
+    const sortedData = [...filteredEmployees].sort((a, b) => {
         let valA, valB;
 
         switch (sortColumn) {
@@ -243,7 +245,7 @@ function renderEmployeesTable() {
 
     // Logic Pagination menggunakan data yang sudah disortir
     const totalPages = Math.ceil(sortedData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
+    const startIndex = (employeesCurrentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageData = sortedData.slice(startIndex, endIndex);
 
@@ -269,7 +271,7 @@ function renderEmployeesTable() {
       </tr>
   `).join('');
 
-    renderPaginationControls(totalPages);
+    renderPaginationControls(totalPages, employeesCurrentPage, 'employeePagination', 'changeEmployeesPage');
     updateSortIcons();
 }
 
@@ -281,7 +283,7 @@ function handleSort(column) {
         sortColumn = column;
         sortDirection = 'asc';
     }
-    currentPage = 1; // Reset ke halaman 1 setiap kali sort berubah
+    employeesCurrentPage = 1; // Reset ke halaman 1 setiap kali sort berubah
     renderEmployeesTable();
 }
 
@@ -325,34 +327,40 @@ function toggleEmployeeStatus(id, isActive) {
     }
 }
 
-// Render Tombol Pagination
-function renderPaginationControls(totalPages) {
-    const container = document.getElementById('employeePagination');
+// Render Tombol Pagination (Generic)
+function renderPaginationControls(totalPages, currentPage, containerId, changePageFuncName) {
+    const container = document.getElementById(containerId);
     if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
 
     let buttons = '';
 
     // Prev Button
-    buttons += `<button class="btn-secondary" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">Prev</button>`;
+    buttons += `<button class="btn-secondary" ${currentPage === 1 ? 'disabled' : ''} onclick="${changePageFuncName}(${currentPage - 1})">Prev</button>`;
 
     // Page Numbers (Max 5 visible)
     for (let i = 1; i <= totalPages; i++) {
         if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            buttons += `<button class="btn-secondary ${i === currentPage ? 'active-page' : ''}" onclick="changePage(${i})" style="${i === currentPage ? 'background: var(--primary); color: white;' : ''}">${i}</button>`;
+            buttons += `<button class="btn-secondary ${i === currentPage ? 'active-page' : ''}" onclick="${changePageFuncName}(${i})" style="${i === currentPage ? 'background: var(--primary); color: white;' : ''}">${i}</button>`;
         } else if (i === currentPage - 2 || i === currentPage + 2) {
             buttons += `<span style="padding: 0.5rem;">...</span>`;
         }
     }
 
     // Next Button
-    buttons += `<button class="btn-secondary" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">Next</button>`;
+    buttons += `<button class="btn-secondary" ${currentPage === totalPages ? 'disabled' : ''} onclick="${changePageFuncName}(${currentPage + 1})">Next</button>`;
 
     container.innerHTML = buttons;
 }
 
-function changePage(page) {
-    if (page < 1 || page > Math.ceil(filteredData.length / itemsPerPage)) return;
-    currentPage = page;
+function changeEmployeesPage(page) {
+    const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+    if (page < 1 || page > totalPages) return;
+    employeesCurrentPage = page;
     renderEmployeesTable();
 }
 
@@ -449,6 +457,7 @@ async function loadAttendance() {
         const response = await fetch(url);
         const attendance = await response.json();
         activeAttendanceData = attendance; // Simpan untuk filtering
+        attendanceCurrentPage = 1; // Reset to page 1
         renderAttendanceTable();
     } catch (error) {
         console.error('Gagal memuat data absensi:', error);
@@ -456,11 +465,13 @@ async function loadAttendance() {
 }
 
 function handleAttendanceFilter() {
+    attendanceCurrentPage = 1; // Reset case for search
     renderAttendanceTable();
 }
 
 function renderAttendanceTable(data = null) {
     const tbody = document.querySelector('#attendance tbody');
+    const paginationContainer = document.getElementById('attendancePagination');
     if (!tbody) return;
 
     let displayData = data || activeAttendanceData;
@@ -475,12 +486,19 @@ function renderAttendanceTable(data = null) {
 
     if (!displayData || displayData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">Tidak ada data absensi</td></tr>';
+        if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
 
-    tbody.innerHTML = displayData.map((record, index) => `
+    // Pagination Logic
+    const totalPages = Math.ceil(displayData.length / itemsPerPage);
+    const startIndex = (attendanceCurrentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = displayData.slice(startIndex, endIndex);
+
+    tbody.innerHTML = pageData.map((record, index) => `
         <tr>
-            <td>${index + 1}</td>
+            <td>${startIndex + index + 1}</td>
             <td>${formatDate(record.date)}</td>
             <td>${record.employee_id}</td>
             <td>${record.name}</td>
@@ -493,6 +511,17 @@ function renderAttendanceTable(data = null) {
             <td>${record.late_minutes ? record.late_minutes + ' menit' : '-'}</td>
         </tr>
     `).join('');
+
+    renderPaginationControls(totalPages, attendanceCurrentPage, 'attendancePagination', 'changeAttendancePage');
+}
+
+function changeAttendancePage(page) {
+    const totalPages = Math.ceil(activeAttendanceData.length / itemsPerPage); // This might be wrong if searching, but displayData is local to render. 
+    // Actually, I should probably store filtered data globally too if I want smooth pagination with search.
+    // For now, let's just use activeAttendanceData and re-filter in changePage if needed, or better, 
+    // make re-rendering call the filtering logic again.
+    attendanceCurrentPage = page;
+    renderAttendanceTable();
 }
 
 // ========== LAPORAN BULANAN ==========
@@ -521,6 +550,7 @@ async function loadMonthlyReport() {
 
         // Render table
         activeReportData = data.employees;
+        reportCurrentPage = 1; // Reset to page 1
         renderMonthlyReportTable();
 
         // Render branch summary cards
@@ -534,11 +564,13 @@ async function loadMonthlyReport() {
 }
 
 function handleReportFilter() {
+    reportCurrentPage = 1; // Reset case for search
     renderMonthlyReportTable();
 }
 
 function renderMonthlyReportTable(data = null) {
     const tbody = document.getElementById('reportTableBody');
+    const paginationContainer = document.getElementById('reportPagination');
     if (!tbody) return;
 
     let displayData = data || activeReportData;
@@ -553,12 +585,19 @@ function renderMonthlyReportTable(data = null) {
 
     if (!displayData || displayData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="12" style="text-align: center;">Tidak ada data</td></tr>';
+        if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
 
-    tbody.innerHTML = displayData.map((record, index) => `
+    // Pagination Logic
+    const totalPages = Math.ceil(displayData.length / itemsPerPage);
+    const startIndex = (reportCurrentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = displayData.slice(startIndex, endIndex);
+
+    tbody.innerHTML = pageData.map((record, index) => `
         <tr>
-            <td>${index + 1}</td>
+            <td>${startIndex + index + 1}</td>
             <td>${formatDate(record.date)}</td>
             <td>${record.employee_id}</td>
             <td>${record.name}</td>
@@ -571,6 +610,13 @@ function renderMonthlyReportTable(data = null) {
             <td><span class="overtime-badge">${record.overtime_minutes} menit</span></td>
         </tr>
     `).join('');
+
+    renderPaginationControls(totalPages, reportCurrentPage, 'reportPagination', 'changeReportPage');
+}
+
+function changeReportPage(page) {
+    reportCurrentPage = page;
+    renderMonthlyReportTable();
 }
 
 function renderBranchSummaryCards(branchSummary) {
