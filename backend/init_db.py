@@ -21,7 +21,7 @@ def init_database():
     )
     cursor = conn.cursor()
 
-    # Buat database jika belum ada
+    # Buat database
     cursor.execute(f"CREATE DATABASE IF NOT EXISTS {os.getenv('DB_NAME', 'hris')}")
     cursor.execute(f"USE {os.getenv('DB_NAME', 'hris')}")
 
@@ -105,7 +105,6 @@ def init_database():
         hashed_pw = generate_password_hash('admin123')
         cursor.execute('INSERT INTO users (username, password, role) VALUES (%s, %s, %s)', ('admin', hashed_pw, 'admin'))
 
-    # Tabel mesin absensi (info lengkap per mesin).
     # device_key = password rahasia per mesin (diisi kamu, dipakai saat mesin/middleware push ke API).
     # device_ip = domain (misal hris.tamvan.web.id) atau IP, untuk referensi; API pakai domain.
     cursor.execute('''
@@ -169,21 +168,17 @@ def init_database():
         except mysql.connector.Error:
             pass
 
-    # Satu mesin patokan (X105). Cabang lain: copy row ini, ubah id/serial_no/branch_id/device_key.
-    # - id = serial number mesin (dari menu Info Mesin)
-    # - device_key = password rahasia yang kamu buat; isi sama di middleware/mesin saat push ke API
-    # - device_ip = domain server (hris.tamvan.web.id) atau IP, untuk referensi saja
     # API push: POST https://hris.tamvan.web.id/api/attendance/push  body: device_id, device_key, records[]
     devices = [
-        # Template mesin X105 (Solution) - ganti branch_id & device_key per cabang
+        # Template mesin X105 (Solution)
         (
-            'CKEB223560955',           # id = serial number mesin
-            'p9',                # branch_id (ganti untuk cabang lain)
-            'X105 Fingerprint',        # device_name
-            'hris.tamvan.web.id',     # device_ip = domain (bukan IP)
+            'CKEB223560955',            # id = serial number mesin
+            'p9',                       # branch_id (ganti untuk cabang lain)
+            'X105 Fingerprint',         # device_name
+            'hris.tamvan.web.id',       # device_ip = domain
             'ganti_dengan_key_rahasia', # device_key = isi sendiri, rahasia per mesin
-            'CKEB223560955',           # serial_no
-            '00:17:61:12:7e:04',       # mac_address
+            'CKEB223560955',            # serial_no
+            '00:17:61:12:7e:04',        # mac_address
             'X105',                     # model
             'ZLM60_TFT',                # platform
             'Solution',                 # manufacturer
