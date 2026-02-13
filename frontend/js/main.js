@@ -129,6 +129,13 @@ async function handleLogout() {
 
     try {
         await fetch(`${API_BASE}/logout`, { method: 'POST' });
+
+        // Reset form login agar kosong saat logout
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.reset();
+        }
+
         showToast('Anda telah logout', 'info');
         checkAuth();
     } catch (error) {
@@ -424,13 +431,37 @@ function calculateWorkDuration(startDate) {
     }
 }
 
-// Helper: Format tanggal yyyy-mm-dd ke dd/mm/yyyy
-function formatDate(dateString) {
+// Helper: Format tanggal yyyy-mm-dd
+function formatDate(dateString, includeWeekday = false) {
     if (!dateString) return 'dd/mm/yyyy';
-    // Gunakan regex untuk memastikan format yyyy-mm-dd
+
+    // Jika formatnya ISO/GMT dari API (misal: "Fri, 13 Feb 2026 00:00:00 GMT")
+    // Ambil bagian tanggal saja
+    if (dateString.includes('GMT')) {
+        const d = new Date(dateString);
+        if (isNaN(d.getTime())) return dateString;
+        dateString = d.toISOString().split('T')[0];
+    }
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
     const parts = dateString.split('-');
     if (parts.length !== 3) return dateString;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+    const day = parts[2];
+    const month = months[parseInt(parts[1]) - 1];
+    const year = parts[0];
+
+    let formatted = `${day} ${month} ${year}`;
+
+    if (includeWeekday) {
+        const d = new Date(dateString);
+        const dayName = days[d.getDay()];
+        formatted = `${dayName}, ${formatted}`;
+    }
+
+    return formatted;
 }
 
 // Fungsi untuk update tampilan overlay pada input type="date"
@@ -598,7 +629,7 @@ function renderMonthlyReportTable(data = null) {
     tbody.innerHTML = pageData.map((record, index) => `
         <tr>
             <td>${startIndex + index + 1}</td>
-            <td>${formatDate(record.date)}</td>
+            <td>${formatDate(record.date, true)}</td>
             <td>${record.employee_id}</td>
             <td>${record.name}</td>
             <td><span class="branch-badge ${record.branch_id}">${getBranchName(record.branch_id)}</span></td>
