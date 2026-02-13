@@ -55,7 +55,7 @@ let activeReportData = [];
 let employeesCurrentPage = 1;
 let attendanceCurrentPage = 1;
 let reportCurrentPage = 1;
-const itemsPerPage = 50;
+const itemsPerPage = 40;
 let filteredEmployees = [];
 let sortColumn = 'id';
 let sortDirection = 'asc'; // 'asc' or 'desc'
@@ -265,6 +265,7 @@ function renderEmployeesTable() {
           <td>${emp.department || '-'}</td>
           <td><span class="shift-badge">${emp.shift_start}–${emp.shift_end}</span></td>
           <td><span class="branch-badge ${emp.branch_id}">${getBranchName(emp.branch_id)}</span></td>
+          <td>${calculateWorkDuration(emp.start_date)}</td>
           <td><span class="status-badge ${emp.is_active ? 'status-active' : 'status-inactive'}">
               ${emp.is_active ? 'Aktif' : 'Resign'}
           </span></td>
@@ -437,10 +438,13 @@ function formatDate(dateString, includeWeekday = false) {
 
     // Jika formatnya ISO/GMT dari API (misal: "Fri, 13 Feb 2026 00:00:00 GMT")
     // Ambil bagian tanggal saja
-    if (dateString.includes('GMT')) {
+    if (dateString.includes('GMT') || dateString.includes('T')) {
         const d = new Date(dateString);
         if (isNaN(d.getTime())) return dateString;
-        dateString = d.toISOString().split('T')[0];
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        dateString = `${year}-${month}-${day}`;
     }
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -462,6 +466,21 @@ function formatDate(dateString, includeWeekday = false) {
     }
 
     return formatted;
+}
+
+// Helper: Format tanggal ke yyyy-mm-dd untuk input type="date"
+function formatDateToYYYYMMDD(dateString) {
+    if (!dateString) return '';
+    try {
+        const d = new Date(dateString);
+        if (isNaN(d.getTime())) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    } catch (e) {
+        return '';
+    }
 }
 
 // Fungsi untuk update tampilan overlay pada input type="date"
@@ -771,7 +790,8 @@ function openEditEmployeeModal(employee) {
     document.querySelector('select[name="is_active"]').value = employee.is_active ? '1' : '0';
 
     // Contract fields
-    document.querySelector('input[name="start_date"]').value = employee.start_date || '';
+    const formattedStartDate = formatDateToYYYYMMDD(employee.start_date);
+    document.querySelector('input[name="start_date"]').value = formattedStartDate;
     document.querySelector('select[name="contract_duration_months"]').value = employee.contract_duration_months || '';
 
     // Hitung dan tampilkan lama bekerja
@@ -785,7 +805,16 @@ function openEditEmployeeModal(employee) {
 
     // Update overlay input tanggal
     const startDateInput = document.querySelector('input[name="start_date"]');
-    if (startDateInput) handleDateInputDisplay(startDateInput);
+    if (startDateInput) {
+        handleDateInputDisplay(startDateInput);
+        // Event listener untuk update real-time
+        startDateInput.oninput = (e) => {
+            handleDateInputDisplay(e.target);
+            if (durationDisplay) {
+                durationDisplay.value = calculateWorkDuration(e.target.value);
+            }
+        };
+    }
 
     document.getElementById('employeeModal').classList.remove('hidden');
 }
