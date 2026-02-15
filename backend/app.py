@@ -85,16 +85,73 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def calculate_minutes_diff(time1, time2):
-    """Menghitung selisih menit antara dua string waktu (HH:MM:SS atau HH:MM)"""
-    if not time1 or not time2:
-        return 0
-    
-    def to_min(t):
-        parts = t.split(':')
+# ============================================
+# FUNGSI BANTUAN UNTUK HITUNG WAKTU & LOGIKA SHIFT
+# ============================================
+
+def to_minutes(time_str):
+    """Konversi string jam AA:BB ke menit integer dari awal hari"""
+    try:
+        parts = time_str.split(':')
         return int(parts[0]) * 60 + int(parts[1])
+    except:
+        return 0
+
+def calculate_diff_smart(time_val, ref_time, is_night_shift=False):
+    """
+    Menghitung selisih menit (time_val - ref_time).
+    Menangani crossing midnight untuk shift malam.
+    Contoh Shift Malam: 22:00 - 06:00.
+    - Check-in 23:00 vs Start 22:00 -> +60 menit
+    - Check-in 01:00 vs Start 22:00 -> +180 menit (dianggap next day)
+    - Check-out 04:00 vs End 06:00 -> -120 menit
+    - Check-out 07:00 vs End 06:00 -> +60 menit
+    """
+    t_min = to_minutes(time_val)
+    r_min = to_minutes(ref_time)
     
-    return to_min(time1) - to_min(time2)
+    diff = t_min - r_min
+    
+    # Deteksi crossing midnight
+    # Jika selisih absolut sangat besar (> 12 jam = 720 menit), kemungkinan nyebrang hari
+    if diff < -720: # Contoh: t=01:00 (60), r=22:00 (1320) -> diff = -1260
+        diff += 1440 # Tambah 24 jam
+    elif diff > 720: # Contoh: t=23:00 (1380), r=06:00 (360) -> diff = 1020
+        diff -= 1440 # Kurangi 24 jam
+        
+    return diff
+
+def get_logical_date(timestamp_str, shift_start, shift_end):
+    """
+    Menentukan tanggal absensi yang logis.
+    Untuk Shift Normal (09-17): Tanggal sesuai timestamp.
+    Untuk Shift Malam (22-06):
+    - Absen jam 22:00 - 23:59: Tanggal record = Tanggal itu.
+    - Absen jam 00:00 - 12:00: Tanggal record = KEMARIN (H-1).
+    """
+    dt = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+    date_part = dt.date()
+    time_part = dt.time()
+    t_min = time_part.hour * 60 + time_part.minute
+    
+    start_min = to_minutes(shift_start)
+    end_min = to_minutes(shift_end)
+    
+    # Cek apakah Shift Malam (Start > End)
+    is_night_shift = start_min > end_min
+    
+    if is_night_shift:
+        # Ambang batas logis: jam 14:00 (siang).
+        # Aktivitas 00:00 - 14:00 dianggap milik shift MALAM SEBELUMNYA.
+        # Aktivitas 14:00 - 23:59 dianggap milik shift HARI INI.
+        cutoff_min = 14 * 60 
+        
+        if t_min < cutoff_min:
+            # Dianggap hari sebelumnya
+            from datetime import timedelta
+            return (date_part - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    return date_part.strftime('%Y-%m-%d')
 
 # ============================================
 # ROUTE UNTUK FRONTEND
@@ -196,8 +253,6 @@ def adms_cdata():
     if not sn:
         return "ERROR: SN required", 400
     
-    print(f"DEBUG: PUSH ADMS Request - SN: {sn}, Table: {table}, Options: {options}, Method: {request.method}")
-    
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute('''
@@ -209,9 +264,7 @@ def adms_cdata():
     device = cursor.fetchone()
     
     if not device:
-        # For debugging: Allow unknown SNs but log them clearly
-        print(f"DEBUG: Unknown SN attempting connection: {sn}. PLEASE REGISTER THIS SN IN THE WEB UI.")
-        # Create a mock device object so the script doesn't crash
+        # Mock device for unregistered SN allow
         device = {
             'last_attlog_stamp': 0, 'last_operlog_stamp': 0, 'last_attphoto_stamp': 0,
             'push_delay': 10, 'error_delay': 30, 'realtime_mode': 1, 'timezone_offset': 7,
@@ -232,82 +285,108 @@ def adms_cdata():
             f"TransFlag={device['trans_flag'] or 'TransData AttLog OpLog'}",
             f"TimeZone={device['timezone_offset'] or 7}",
             f"Realtime={device['realtime_mode'] or 1}",
-            "Encrypt=None",
-            "ServerVer=3.0.0",
-            "PushProtVer=2.2.14"
+            "Encrypt=None", "ServerVer=3.0.0", "PushProtVer=2.2.14"
         ]
         
-        response_body = "\n".join(response_lines)
-        
-        # Update last sync time
         cursor.execute('UPDATE attendance_devices SET last_sync = NOW() WHERE id = %s', (sn,))
         conn.commit()
         conn.close()
         
-        # Return response with proper headers as per PUSH SDK spec
-        response = app.response_class(
-            response=response_body,
-            status=200,
-            mimetype='text/plain'
-        )
+        response = app.response_class(response="\n".join(response_lines), status=200, mimetype='text/plain')
         response.headers['Pragma'] = 'no-cache'
-        response.headers['Cache-Control'] = 'no-store'
         return response
 
     # DATA UPLOAD: Device sending attendance logs (POST with table=ATTLOG)
     if request.method == 'POST' and table == 'ATTLOG':
         try:
             raw_data = request.data.decode('utf-8')
-            print(f"DEBUG: Raw data from {sn}:\n{raw_data}")
             logs = parse_attlog(raw_data)
-            print(f"DEBUG: Parsed {len(logs)} logs")
             
             max_stamp = device['last_attlog_stamp'] or 0
-            processed_count = 0
             
             for log in logs:
                 pin_val = log['pin']
-                print(f"DEBUG: Processing log - PIN: {pin_val}, Time: {log['timestamp']}, Status: {log['status']}")
                 
-                # Cari karyawan: Cek di kolom 'id' ATAU 'device_pin'
-                # Ini mengantisipasi jika ID di mesin (PIN) adalah string numeric yang sama dengan ID di sistem
-                cursor.execute('''
-                    SELECT id, shift_start, shift_end 
-                    FROM employees 
-                    WHERE id = %s OR device_pin = %s
-                ''', (pin_val, pin_val))
+                # Cari karyawan
+                cursor.execute('SELECT id, shift_start, shift_end FROM employees WHERE id = %s OR device_pin = %s', (pin_val, pin_val))
                 employee = cursor.fetchone()
                 
                 if employee:
                     employee_id = employee['id']
                     timestamp = log['timestamp']
-                    date_part = timestamp.split()[0]
-                    time_part = timestamp.split()[1]
-                    status = log['status'] 
+                    raw_status = log['status']
                     
-                    print(f"DEBUG: Matched employee {employee_id} for PIN {pin_val}")
+                    # LOGIC BARU: Tentukan Shift & Tanggal
+                    shift_start = employee['shift_start'] or '09:00'
+                    shift_end = employee['shift_end'] or '17:00'
                     
-                    if status == 0: # Check-in
-                        late = max(0, calculate_minutes_diff(time_part, employee['shift_start']))
+                    # Hitung tanggal logis (untuk shift malam)
+                    date_part = get_logical_date(timestamp, shift_start, shift_end)
+                    time_part = timestamp.split()[1] # HH:MM:SS
+                    
+                    # LOGIC BARU: Smart Status Detection
+                    # Jika status mesin 0 (Check-in) tapi waktu dekat shift keluar -> Anggap Check-out
+                    # Jika status mesin 1 (Check-out) tapi waktu dekat shift masuk -> Anggap Check-in
+                    # Ambang batas toleransi: 120 menit (2 jam)
+                    
+                    is_night = to_minutes(shift_start) > to_minutes(shift_end)
+                    diff_start = calculate_diff_smart(time_part, shift_start, is_night)
+                    diff_end = calculate_diff_smart(time_part, shift_end, is_night)
+                    
+                    final_status = raw_status 
+                    
+                    # Aturan Smart Override:
+                    # 1. Jika mesin bilang Check-out (1), tapi waktu absen sangat dekat Start (+- 2 jam) DAN jauh dari End -> Override jadi CHECK-IN
+                    if raw_status != 0 and abs(diff_start) < 120 and abs(diff_end) > 120:
+                        final_status = 0 # Force Check-in
+                        print(f"DEBUG: SmartOverride PIN {pin_val} {time_part}: Status {raw_status} -> 0 (Check-in)")
+                        
+                    # 2. Jika mesin bilang Check-in (0), tapi waktu absen sangat dekat End (+- 2 jam) DAN jauh dari Start -> Override jadi CHECK-OUT
+                    elif raw_status == 0 and abs(diff_end) < 120 and abs(diff_start) > 120:
+                        final_status = 1 # Force Check-out
+                        print(f"DEBUG: SmartOverride PIN {pin_val} {time_part}: Status {raw_status} -> 1 (Check-out)")
+                    
+                    
+                    if final_status == 0: # Check-in
+                        # Hitung Keterlambatan: Check-in - Shift Start
+                        late = max(0, calculate_diff_smart(time_part, shift_start, is_night))
+                        
                         cursor.execute('''
                             INSERT INTO attendance (employee_id, date, check_in, late_minutes)
                             VALUES (%s, %s, %s, %s)
-                            ON DUPLICATE KEY UPDATE check_in = VALUES(check_in), late_minutes = VALUES(late_minutes)
+                            ON DUPLICATE KEY UPDATE 
+                                check_in = VALUES(check_in), 
+                                late_minutes = VALUES(late_minutes)
                         ''', (employee_id, date_part, time_part, late))
-                        print(f"DEBUG: Inserted Check-in for {employee_id}")
+                        
                     else: # Check-out
-                        overtime = max(0, calculate_minutes_diff(time_part, employee['shift_end']))
+                        # Hitung Lembur: Check-out - Shift End
+                        overtime = max(0, calculate_diff_smart(time_part, shift_end, is_night))
+                        
+                        # Validasi: Check-out harus > Check-in
+                        # Kita ambil check_in yang sudah ada dulu untuk validasi
+                        cursor.execute('SELECT check_in FROM attendance WHERE employee_id=%s AND date=%s', (employee_id, date_part))
+                        existing = cursor.fetchone()
+                        
+                        validation_status = 'present'
+                        if existing and existing['check_in']:
+                            # Cek durasi kerja positif
+                            # Jika Check-out lebih awal dari Check-in (invalid)
+                            diff_work = calculate_diff_smart(time_part, existing['check_in'], is_night)
+                            if diff_work < 0:
+                                validation_status = 'invalid'
+                                overtime = 0 # Invalid record, no overtime
+                        
                         cursor.execute('''
-                            INSERT INTO attendance (employee_id, date, check_out, overtime_minutes)
-                            VALUES (%s, %s, %s, %s)
-                            ON DUPLICATE KEY UPDATE check_out = VALUES(check_out), overtime_minutes = VALUES(overtime_minutes)
-                        ''', (employee_id, date_part, time_part, overtime))
-                        print(f"DEBUG: Inserted Check-out for {employee_id}")
-                    processed_count += 1
-                else:
-                    print(f"DEBUG: Employee NOT FOUND for PIN: {log['pin']}")
-                
-                # Track the highest stamp value
+                            INSERT INTO attendance (employee_id, date, check_out, overtime_minutes, status)
+                            VALUES (%s, %s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE 
+                                check_out = VALUES(check_out), 
+                                overtime_minutes = VALUES(overtime_minutes),
+                                status = VALUES(status)
+                        ''', (employee_id, date_part, time_part, overtime, validation_status))
+
+                # Track stamp
                 if 'stamp' in log and log['stamp'] > max_stamp:
                     max_stamp = log['stamp']
 
@@ -338,12 +417,7 @@ def adms_cdata():
 
     # Default response for other requests
     conn.close()
-    response = app.response_class(
-        response="OK",
-        status=200,
-        mimetype='text/plain'
-    )
-    return response
+    return "OK"
 
 @app.route('/iclock/getrequest', methods=['GET'])
 def adms_getrequest():
