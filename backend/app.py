@@ -351,6 +351,13 @@ def adms_cdata():
                         # Hitung Keterlambatan: Check-in - Shift Start
                         late = max(0, calculate_diff_smart(time_part, shift_start, is_night))
                         
+                        # CLEANUP: Jika sebelumnya tercatat sebagai Check-out di jam yang sama (error mesin), hapus Check-outnya
+                        cursor.execute('''
+                            UPDATE attendance 
+                            SET check_out = NULL, overtime_minutes = 0, status = 'present'
+                            WHERE employee_id = %s AND date = %s AND check_out = %s
+                        ''', (employee_id, date_part, time_part))
+
                         cursor.execute('''
                             INSERT INTO attendance (employee_id, date, check_in, late_minutes)
                             VALUES (%s, %s, %s, %s)
@@ -362,6 +369,13 @@ def adms_cdata():
                     else: # Check-out
                         # Hitung Lembur: Check-out - Shift End
                         overtime = max(0, calculate_diff_smart(time_part, shift_end, is_night))
+                        
+                        # CLEANUP: Jika sebelumnya tercatat sebagai Check-in di jam yang sama, hapus Check-innya
+                        cursor.execute('''
+                            UPDATE attendance 
+                            SET check_in = NULL, late_minutes = 0
+                            WHERE employee_id = %s AND date = %s AND check_in = %s
+                        ''', (employee_id, date_part, time_part))
                         
                         # Validasi: Check-out harus > Check-in
                         # Kita ambil check_in yang sudah ada dulu untuk validasi
