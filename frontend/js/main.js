@@ -578,8 +578,8 @@ function renderAttendanceTable(data = null) {
             <td>${record.shift_end || '-'}</td>
             <td>${record.check_in || '-'}</td>
             <td>${record.check_out || '-'}</td>
-            <td>${record.overtime_minutes ? (record.overtime_minutes / 60).toFixed(1) + ' jam' : '-'}</td>
             <td>${record.late_minutes ? record.late_minutes + ' menit' : '-'}</td>
+            <td>${record.overtime_minutes ? (record.overtime_minutes / 60).toFixed(1) + ' jam' : '-'}</td>
         </tr>
     `).join('');
 
