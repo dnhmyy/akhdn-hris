@@ -1,4 +1,6 @@
 from flask import Flask, jsonify, request, send_from_directory, send_file, session, redirect, url_for
+from flask import render_template_string
+import time
 import mysql.connector
 import os
 import base64
@@ -19,6 +21,21 @@ load_dotenv(os.path.join(_env_dir, '.env.local'), override=True)
 load_dotenv(os.path.join(_root_dir, '.env.local'), override=True)
 
 app = Flask(__name__, static_folder='../frontend')
+app.config['VERSION'] = str(int(time.time()))
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+#Cache Control Configration
+@app.after_request
+def add_cache_control(response):
+    if (
+        request.path.startswith('/api')
+        or request.path == '/'
+        or request.path.endswith('.html')
+    ):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+    return response
+
 app.secret_key = os.getenv('SECRET_KEY', 'super-secret-key-roti-kebanggaan-2026')
 
 # Folder simpan foto dari mesin absensi
@@ -84,8 +101,9 @@ def calculate_minutes_diff(time1, time2):
 # ============================================
 @app.route('/')
 def serve_frontend():
-    """Tampilkan halaman utama frontend"""
-    return send_from_directory('../frontend', 'index.html')
+    with open('../frontend/index.html', 'r', encoding='utf-8') as f:
+        html = f.read()
+    return render_template_string(html)
 
 @app.route('/<path:filename>')
 def serve_static(filename):
