@@ -73,7 +73,7 @@ Tujuan utama:
 mengurangi beban kerja manual HR, meningkatkan akurasi data, dan mempermudah proses monitoring lintas cabang.
 
 
-👨‍💻Pengembang
+## Pengembang
 Dikembangkan secara internal oleh:
 DnnTech
 RotiKebanggaan IT Division – 2026
