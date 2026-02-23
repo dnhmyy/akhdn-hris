@@ -1,0 +1,53 @@
+/* Font Awesome 6 Minimal Subset — RotiKebanggaan HRIS */
+/* Icons used: fa-user, fa-lock, fa-sign-out-alt, fa-building, fa-clock, fa-redo, fa-trash-alt, fa-fingerprint */
+
+@font-face {
+    font-family: 'Font Awesome 6 Free';
+    font-style: normal;
+    font-weight: 900;
+    font-display: swap;
+    src: url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/fa-solid-900.woff2') format('woff2');
+}
+
+.fas {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Only the 8 icons actually used */
+.fa-user::before {
+    content: "\f007";
+}
+
+.fa-lock::before {
+    content: "\f023";
+}
+
+.fa-sign-out-alt::before {
+    content: "\f2f5";
+}
+
+.fa-building::before {
+    content: "\f1ad";
+}
+
+.fa-clock::before {
+    content: "\f017";
+}
+
+.fa-redo::before {
+    content: "\f01e";
+}
+
+.fa-trash-alt::before {
+    content: "\f2ed";
+}
+
+.fa-fingerprint::before {
+    content: "\f577";
+}

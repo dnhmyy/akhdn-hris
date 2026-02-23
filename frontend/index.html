@@ -16,11 +16,10 @@
     <link rel="stylesheet" href="/css/style.css?v={{ config['VERSION'] }}">
   </noscript>
 
-  <!-- Font Awesome non-blocking -->
-  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style"
-    onload="this.onload=null;this.rel='stylesheet'">
+  <!-- Font Awesome subset (only 8 icons used) — replaces 18KB CDN -->
+  <link rel="preload" href="/css/icons.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/icons.css">
   </noscript>
 </head>
 
@@ -454,7 +453,7 @@
 
   <!-- Load JavaScript (deferred to prevent render-blocking) -->
   <script src="/js/config.js?v={{ config['VERSION'] }}" defer></script>
-  <script src="/js/main.js?v={{ config['VERSION'] }}" defer></script>
+  <script src="/js/main.min.js?v={{ config['VERSION'] }}" defer></script>
 </body>
 
 </html>
