@@ -8,6 +8,9 @@ from functools import wraps
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import ipaddress
 
 # Load env: .env dulu, lalu .env.local dengan override=True agar local menang (DB_HOST=localhost)
 _env_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,6 +23,21 @@ load_dotenv(os.path.join(_root_dir, '.env.local'), override=True)
 app = Flask(__name__, static_folder='../frontend')
 app.config['VERSION'] = str(int(time.time()))
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+# SECURE SESSION HARDENING
+app.config.update(
+    SESSION_COOKIE_SECURE=False, # Karena SSL HTTP Origin
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+)
+
+# SETUP RATE LIMITER
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 #Cache Control Configration
 @app.after_request
@@ -74,6 +92,23 @@ def login_required(f):
             return jsonify({'error': 'Unauthorized', 'message': 'Please login first'}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Unauthorized', 'message': 'Please login first'}), 401
+        if session.get('role') != 'admin':
+            return jsonify({'error': 'Forbidden', 'message': 'Admin access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def is_private_ip(ip_str):
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        return ip.is_private
+    except ValueError:
+        return False
 
 # ============================================
 # FUNGSI BANTUAN UNTUK HITUNG WAKTU & LOGIKA SHIFT
@@ -130,6 +165,7 @@ def serve_static(filename):
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     data = request.json
     username = data.get('username')
@@ -408,7 +444,7 @@ def adms_getrequest():
 # --- SOAP Remote Management ---
 
 @app.route('/api/devices/<string:device_id>/soap/sync-time', methods=['POST'])
-@login_required
+@admin_required
 def device_sync_time(device_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -429,7 +465,7 @@ def device_sync_time(device_id):
     return jsonify({'error': 'Failed to sync time', 'details': result}), 500
 
 @app.route('/api/devices/<string:device_id>/soap/clear-logs', methods=['POST'])
-@login_required
+@admin_required
 def device_clear_logs(device_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -447,7 +483,7 @@ def device_clear_logs(device_id):
     return jsonify({'error': 'Failed to clear logs', 'details': result}), 500
 
 @app.route('/api/devices/<string:device_id>/soap/restart', methods=['POST'])
-@login_required
+@admin_required
 def device_restart(device_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -458,6 +494,9 @@ def device_restart(device_id):
     if not device or not device['device_ip']:
         return jsonify({'error': 'Device not found'}), 404
 
+    if not is_private_ip(device['device_ip']):
+        return jsonify({'error': 'SSRF Protection: Device IP must be a private network IP'}), 403
+
     payload = f"<Restart><ArgComKey>{device['device_key'] or 0}</ArgComKey></Restart>"
     result = send_soap_request(device['device_ip'], payload)
     if result and "OK" in result:
@@ -465,7 +504,7 @@ def device_restart(device_id):
     return jsonify({'error': 'Failed to restart device', 'details': result}), 500
 
 @app.route('/api/devices/<string:device_id>/soap/upload-user', methods=['POST'])
-@login_required
+@admin_required
 def device_upload_user(device_id):
     data = request.json
     employee_id = data.get('employee_id')
@@ -521,7 +560,7 @@ def get_attendance_devices():
 
 # --- Karyawan ---
 @app.route('/api/employees/<string:employee_id>', methods=['PUT'])
-@login_required
+@admin_required
 def update_employee(employee_id):
     data = request.json
     conn = get_db()
@@ -566,7 +605,7 @@ def update_employee(employee_id):
 
 # DELETE: Nonaktifkan karyawan (soft delete)
 @app.route('/api/employees/<string:employee_id>', methods=['DELETE'])
-@login_required
+@admin_required
 def delete_employee(employee_id):
     conn = get_db()
     cursor = conn.cursor()
@@ -731,7 +770,7 @@ def get_all_employees():
     
 # POST /api/employees
 @app.route('/api/employees', methods=['POST'])
-@login_required
+@admin_required
 def add_employee():
     # Ambil data dari frontend (JSON)
     data = request.json
@@ -1152,4 +1191,4 @@ if __name__ == '__main__':
     #print("API Push Mesin: /api/attendance/push")
     print("="*50 + "\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)

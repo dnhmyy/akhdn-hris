@@ -1,5 +1,15 @@
 // js/main.js - RotiKebanggaan
 
+function escapeHTML(str) {
+    if (!str || typeof str !== 'string') return str;
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Toast notification - di tengah layar, ukuran besar
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
@@ -259,11 +269,11 @@ function renderEmployeesTable() {
     tbody.innerHTML = pageData.map((emp, index) => `
       <tr>
           <td>${startIndex + index + 1}</td>
-          <td>${emp.id}</td>
-          <td>${emp.name}</td>
-          <td>${emp.position || '-'}</td>
-          <td>${emp.department || '-'}</td>
-          <td><span class="shift-badge">${emp.shift_start}–${emp.shift_end}</span></td>
+          <td>${escapeHTML(emp.id)}</td>
+          <td>${escapeHTML(emp.name)}</td>
+          <td>${escapeHTML(emp.position) || '-'}</td>
+          <td>${escapeHTML(emp.department) || '-'}</td>
+          <td><span class="shift-badge">${escapeHTML(emp.shift_start)}–${escapeHTML(emp.shift_end)}</span></td>
           <td><span class="branch-badge ${emp.branch_id}">${getBranchName(emp.branch_id)}</span></td>
           <td><span class="status-badge ${emp.is_active ? 'status-active' : 'status-inactive'}">
               ${emp.is_active ? 'Aktif' : 'Resign'}
@@ -589,9 +599,9 @@ function renderAttendanceTable(data = null) {
         <tr>
             <td>${startIndex + index + 1}</td>
             <td>${formatDate(record.date)}</td>
-            <td>${record.employee_id}</td>
-            <td>${record.name}</td>
-            <td><span class="branch-badge ${record.branch_id}">${getBranchName(record.branch_id)}</span></td>
+            <td>${escapeHTML(record.employee_id)}</td>
+            <td>${escapeHTML(record.name)}</td>
+            <td><span class="branch-badge ${record.branch_id}">${escapeHTML(getBranchName(record.branch_id))}</span></td>
             <td>${record.shift_start || '-'}</td>
             <td>${record.shift_end || '-'}</td>
             <td>${record.check_in || '-'}</td>
@@ -687,9 +697,9 @@ function renderMonthlyReportTable(data = null) {
         <tr>
             <td>${startIndex + index + 1}</td>
             <td>${formatDate(record.date)}</td>
-            <td>${record.employee_id}</td>
-            <td>${record.name}</td>
-            <td><span class="branch-badge ${record.branch_id}">${getBranchName(record.branch_id)}</span></td>
+            <td>${escapeHTML(record.employee_id)}</td>
+            <td>${escapeHTML(record.name)}</td>
+            <td><span class="branch-badge ${record.branch_id}">${escapeHTML(getBranchName(record.branch_id))}</span></td>
             <td>${record.shift_start}</td>
             <td>${record.shift_end}</td>
             <td>${record.check_in}</td>

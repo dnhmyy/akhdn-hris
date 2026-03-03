@@ -7,4 +7,4 @@ requests==2.31.0
 pandas
 openpyxl
 gunicorn
-requests
+requestsFlask-Limiter==3.7.0
