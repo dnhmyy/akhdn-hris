@@ -1,4 +1,4 @@
-// js/main.js - RotiKebanggaan
+// js/main.js - Logika Inti Sistem HRIS (Manajemen Karyawan & Absensi)
 
 function escapeHTML(str) {
     if (!str || typeof str !== 'string') return str;
@@ -10,7 +10,7 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Toast notification - di tengah layar, ukuran besar
+// Notifikasi Toast - Menampilkan pesan di tengah layar
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const iconEl = document.getElementById('toastIcon');
@@ -29,7 +29,7 @@ function showToast(message, type = 'success') {
     }, 3500);
 }
 
-// Confirm modal - ganti native confirm(), tampil di tengah layar
+// Modal Konfirmasi - Pengganti fungsi native confirm()
 function showConfirm(message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -58,7 +58,7 @@ function showConfirm(message) {
     });
 }
 
-// Simpan data karyawan global untuk filtering
+// Penyimpanan data global untuk kebutuhan penyaringan (filtering)
 let employeesData = [];
 let activeAttendanceData = [];
 let activeReportData = [];
@@ -72,7 +72,7 @@ let sortDirection = 'asc'; // 'asc' or 'desc'
 let currentUser = null;
 
 // ============================================
-// AUTHENTICATION LOGIC
+// LOGIKA OTENTIKASI (AUTHENTICATION)
 // ============================================
 
 async function checkAuth() {
@@ -140,7 +140,7 @@ async function handleLogout() {
     try {
         await fetch(`${API_BASE}/logout`, { method: 'POST' });
 
-        // Reset form login agar kosong saat logout
+        // Reset form login setelah logout
         const loginForm = document.getElementById('loginForm');
         if (loginForm) {
             loginForm.reset();
@@ -789,7 +789,7 @@ function populateReportBranchFilter() {
     select.innerHTML = '<option value="">Semua Cabang</option>' + options;
 }
 
-// ========== MODAL TAMBAH/EDIT KARYAWAN ==========
+// ========== MODAL KELOLA KARYAWAN ==========
 let currentModalMode = 'add'; // 'add' atau 'edit'
 
 function populateBranchSelect() {

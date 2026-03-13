@@ -12,7 +12,7 @@ load_dotenv(os.path.join(_env_dir, '.env.local'), override=True)
 load_dotenv(os.path.join(_root_dir, '.env.local'), override=True)
 
 def init_database():
-    # Koneksi ke database MySQL
+    # Koneksi ke layanan database MySQL
     conn = mysql.connector.connect(
         host=os.getenv('DB_HOST', 'localhost'),
         user=os.getenv('DB_USER', 'root'),
@@ -97,16 +97,15 @@ def init_database():
         )
     ''')
 
-    # Insert default admin user jika belum ada
-    # Password default: admin123 (nanti user bisa ganti)
+    # Akun administrator default
     cursor.execute('SELECT id FROM users WHERE username = %s', ('admin',))
     admin_exists = cursor.fetchone()
     if not admin_exists:
         hashed_pw = generate_password_hash('admin123')
         cursor.execute('INSERT INTO users (username, password, role) VALUES (%s, %s, %s)', ('admin', hashed_pw, 'admin'))
 
-    # device_key = password rahasia per mesin (diisi kamu, dipakai saat mesin/middleware push ke API).
-    # device_ip = domain (misal hris.tamvan.web.id) atau IP, untuk referensi; API pakai domain.
+    # device_key = kunci otentikasi unik untuk setiap mesin absensi.
+    # device_ip = alamat host atau IP mesin (digunakan sebagai referensi).
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance_devices (
             id VARCHAR(50) PRIMARY KEY,
@@ -168,15 +167,16 @@ def init_database():
         except mysql.connector.Error:
             pass
 
-    # API push: POST https://hris.tamvan.web.id/api/attendance/push  body: device_id, device_key, records[]
+    # Konfigurasi perangkat/mesin absensi
+    app_domain = os.getenv('APP_DOMAIN', 'hris.tamvan.web.id')
     devices = [
         # Template mesin X105 (Solution)
         (
-            'CKEB223560955',            # id = serial number mesin
-            'p9',                       # branch_id (ganti untuk cabang lain)
+            'CKEB223560955',            # id: serial number
+            'p9',                       # branch_id
             'X105 Fingerprint',         # device_name
-            'hris.tamvan.web.id',       # device_ip = domain
-            'ganti_dengan_key_rahasia', # device_key = isi sendiri, rahasia per mesin
+            app_domain,                 # device_ip/domain
+            'YOUR_SECRET_DEVICE_KEY', # device_key
             'CKEB223560955',            # serial_no
             '00:17:61:12:7e:04',        # mac_address
             'X105',                     # model

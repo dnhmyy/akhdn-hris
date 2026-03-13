@@ -12,7 +12,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import ipaddress
 
-# Load env: .env dulu, lalu .env.local dengan override=True agar local menang (DB_HOST=localhost)
+# Muat variabel lingkungan
 _env_dir = os.path.dirname(os.path.abspath(__file__))
 _root_dir = os.path.dirname(_env_dir)
 load_dotenv(os.path.join(_env_dir, '.env'))
@@ -24,9 +24,9 @@ app = Flask(__name__, static_folder='../frontend')
 app.config['VERSION'] = str(int(time.time()))
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-# SECURE SESSION HARDENING
+# Pengaturan Session yang Aman
 app.config.update(
-    SESSION_COOKIE_SECURE=False, # Karena SSL HTTP Origin
+    SESSION_COOKIE_SECURE=False, # Set ke True jika menggunakan HTTPS secara penuh di produksi
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
 )
@@ -51,15 +51,16 @@ def add_cache_control(response):
         response.headers['Pragma'] = 'no-cache'
     return response
 
-app.secret_key = os.getenv('SECRET_KEY', 'super-secret-key-roti-kebanggaan-2026')
+app.secret_key = os.getenv('SECRET_KEY')
+if not app.secret_key:
+    # Fallback hanya untuk development: pastikan SECRET_KEY diset di .env produksi
+    app.secret_key = 'dev-secret-key-replace-this-in-production'
 
 # Folder simpan foto dari mesin absensi
 UPLOAD_ATTENDANCE = os.path.join(os.path.dirname(__file__), 'uploads', 'attendance')
 os.makedirs(UPLOAD_ATTENDANCE, exist_ok=True)
 
-# ============================================
-# FUNGSI BANTUAN UNTUK BIO-SDK (SOAP)
-# ============================================
+# FUNGSI AKSES PERANGKAT (SDK SOAP)
 def send_soap_request(device_ip, payload):
     """Mengirim request SOAP ke mesin absensi via HTTP port 80"""
     url = f"http://{device_ip}/iWsService"
@@ -71,9 +72,7 @@ def send_soap_request(device_ip, payload):
         print(f"SOAP Error ({device_ip}): {e}")
         return None
 
-# ============================================
-# FUNGSI BANTUAN UNTUK DATABASE & AUTH
-# ============================================
+# FUNGSI AKSES DATABASE & OTENTIKASI
 def get_db():
     """Koneksi ke database MySQL"""
     conn = mysql.connector.connect(
@@ -110,9 +109,7 @@ def is_private_ip(ip_str):
     except ValueError:
         return False
 
-# ============================================
-# FUNGSI BANTUAN UNTUK HITUNG WAKTU & LOGIKA SHIFT
-# ============================================
+# LOGIKA PERHITUNGAN WAKTU DAN SHIFT
 
 def to_minutes(time_str):
     """Konversi string jam AA:BB ke menit integer dari awal hari"""
@@ -146,9 +143,7 @@ def calculate_diff_smart(time_val, ref_time, is_night_shift=False):
         
     return diff
 
-# ============================================
-# ROUTE UNTUK FRONTEND
-# ============================================
+# ROUTE FRONTEND
 @app.route('/')
 def serve_frontend():
     with open('../frontend/index.html', 'r', encoding='utf-8') as f:
@@ -160,9 +155,7 @@ def serve_static(filename):
     """Serve file CSS, JS, dll"""
     return send_from_directory('../frontend', filename)
 
-# ============================================
-# API ENDPOINTS (AUTHENTICATION)
-# ============================================
+# API ENDPOINTS (OTENTIKASI)
 
 @app.route('/api/login', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -296,7 +289,7 @@ def adms_cdata():
             raw_data = request.data.decode('utf-8')
             logs = parse_attlog(raw_data)
             
-            max_stamp = device['last_attlog_stamp'] or 0
+            max_stamp = int(device['last_attlog_stamp'] or 0)
             
             for log in logs:
                 pin_val = log['pin']
@@ -315,8 +308,9 @@ def adms_cdata():
                     shift_end = employee['shift_end'] or '17:00'
                     
                     # Ambil tanggal langsung dari timestamp (tanpa logika shift malam)
-                    date_part = timestamp.split(' ')[0]
-                    time_part = timestamp.split()[1] # HH:MM:SS
+                    ts_str = str(timestamp)
+                    date_part = ts_str.split(' ')[0]
+                    time_part = ts_str.split()[1] # HH:MM:SS
                     
                     # LOGIC BARU: Smart Status Detection
                     # Jika status mesin 0 (Check-in) tapi waktu dekat shift keluar -> Anggap Check-out
@@ -333,12 +327,12 @@ def adms_cdata():
                     # 1. Jika mesin bilang Check-out (1), tapi waktu absen sangat dekat Start (+- 2 jam) DAN jauh dari End -> Override jadi CHECK-IN
                     if raw_status != 0 and abs(diff_start) < 120 and abs(diff_end) > 120:
                         final_status = 0 # Force Check-in
-                        print(f"DEBUG: SmartOverride PIN {pin_val} {time_part}: Status {raw_status} -> 0 (Check-in)")
+                        print(f"INFO: Koreksi status otomatis PIN {pin_val} {time_part}: Status {raw_status} -> 0 (Check-in)")
                         
                     # 2. Jika mesin bilang Check-in (0), tapi waktu absen sangat dekat End (+- 2 jam) DAN jauh dari Start -> Override jadi CHECK-OUT
                     elif raw_status == 0 and abs(diff_end) < 120 and abs(diff_start) > 120:
                         final_status = 1 # Force Check-out
-                        print(f"DEBUG: SmartOverride PIN {pin_val} {time_part}: Status {raw_status} -> 1 (Check-out)")
+                        print(f"INFO: Koreksi status otomatis PIN {pin_val} {time_part}: Status {raw_status} -> 1 (Check-out)")
                     
                     
                     if final_status == 0: # Check-in
@@ -395,7 +389,7 @@ def adms_cdata():
                         ''', (employee_id, date_part, time_part, overtime, validation_status))
 
                 # Track stamp
-                if 'stamp' in log and log['stamp'] > max_stamp:
+                if 'stamp' in log and log['stamp'] and int(log['stamp']) > max_stamp:
                     max_stamp = log['stamp']
 
             # Update device stamps and last sync
@@ -1058,7 +1052,7 @@ def monthly_report():
         'summary': {
             'total_employees': len(unique_employees),
             'total_present': total_present,
-            'total_overtime_hours': round(total_overtime / 60, 1),
+            'total_overtime_hours': round(float(total_overtime) / 60.0, 1),
             'total_late_minutes': total_late
         },
         'employees': report_data,
@@ -1155,7 +1149,7 @@ def export_report():
                         max_length = len(str(cell.value))
                 except:
                     pass
-            adjusted_width = (max_length + 2)
+            adjusted_width = int(max_length) + 2
             ws.column_dimensions[column_letter].width = adjusted_width
     
     output.seek(0)
@@ -1168,27 +1162,23 @@ def export_report():
         download_name=filename
     )
 
-# ============================================
 # JALANKAN SERVER
-# ============================================
 if __name__ == '__main__':
     # Cek koneksi database MySQL
     try:
         conn = get_db()
         conn.ping(reconnect=True)
         conn.close()
-        print("Database connection successful")
+        print("Koneksi database berhasil")
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        print(f"Koneksi database gagal: {e}")
     
-    print("\n" + "="*50)
+    print("\n" + "-"*50)
     print("SERVER HRIS BERJALAN")
-    print("="*50)
-    #print("Dashboard (local): http://localhost:5000")
-    #print("Production: https://hris.tamvan.web.id")
-    #print("API Karyawan: /api/employees")
-    #print("API Cabang: /api/branches")
-    #print("API Push Mesin: /api/attendance/push")
-    print("="*50 + "\n")
+    print("-"*50)
     
+    app_domain = os.getenv('APP_DOMAIN', 'hris.tamvan.web.id')
+    print(f"Production: https://{app_domain}")
+    
+    # Listen di 0.0.0.0 agar bisa diakses dari luar container Docker
     app.run(host='0.0.0.0', port=5000)
