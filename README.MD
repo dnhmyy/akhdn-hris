@@ -1,4 +1,4 @@
-# RotiKebanggaan HRIS
+# HRIS ADMS Integration System
 
 Sistem Informasi Manajemen Sumber Daya Manusia (HRIS) yang dirancang untuk mengelola data karyawan dan absensi secara efisien, terintegrasi dengan mesin fingerprint, serta mendukung operasional multi-cabang.
 
