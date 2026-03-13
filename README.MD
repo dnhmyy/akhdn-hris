@@ -104,15 +104,13 @@ Jika Anda ingin mencoba sistem dengan data simulasi (60+ karyawan & riwayat abse
 
 Berikut adalah struktur visual sistem:
 
-| Halaman | Deskripsi |
-| :--- | :--- |
-| **Login Page** | Keamanan akses dengan latar belakang kustom dan responsif. |
-| **Main Dashboard** | Menampilkan statistik cepat, status mesin, dan navigasi utama. |
-| **Employee List** | Tabel interaktif untuk edit, hapus, dan tambah karyawan baru. |
-| **Attendance Logs** | Riwayat mentah dari mesin beserta status deteksi otomatis. |
-| **Monthly Report** | Ringkasan produktivitas, lembur, dan keterlambatan per periode. |
-
-*(Anda dapat menyematkan screenshot di sini untuk mempercantik tampilan repositori)*
+| Halaman | Deskripsi | Preview |
+| :--- | :--- | :--- |
+| **Login Page** | Keamanan akses dengan latar belakang kustom dan responsif. | ![Login](public/login.png) |
+| **Main Dashboard** | Menampilkan statistik cepat, status mesin, dan navigasi utama. | ![Dashboard](public/dashboard.png) |
+| **Employee List** | Tabel interaktif untuk edit, hapus, dan tambah karyawan baru. | ![Karyawan](public/karyawan.png) |
+| **Attendance Logs** | Riwayat mentah dari mesin beserta status deteksi otomatis. | ![Absensi](public/absensi.png) |
+| **Monthly Report** | Ringkasan produktivitas, lembur, dan keterlambatan per periode. | ![Attendance](public/attedance.png) ![Attendance 2](public/attedance2.png) |
 
 ---
 
