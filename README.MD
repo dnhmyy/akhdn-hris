@@ -1,77 +1,121 @@
-# RotiKebanggaan HRIS
+# HRIS - Employee & Attendance Management System
 
-Sistem HRIS internal yang dikembangkan untuk mendukung operasional RotiKebanggaan, khususnya dalam pengelolaan data karyawan dan absensi multi-cabang. Sistem ini dibuat untuk mengurangi proses rekap manual, meminimalkan kesalahan perhitungan, serta mempercepat proses monitoring dan pelaporan kehadiran karyawan.
+Sistem Informasi Manajemen Sumber Daya Manusia (HRIS) yang dirancang untuk mengelola data karyawan dan absensi secara efisien, terintegrasi dengan mesin fingerprint, serta mendukung operasional multi-cabang.
 
-## Tujuan Pengembangan
+---
 
-**HRIS ini dikembangkan secara internal untuk:**
-- Mengelola data karyawan secara terpusat.
-- Mengintegrasikan mesin absensi fingerprint langsung ke sistem.
-- Mengotomatisasi perhitungan keterlambatan dan lembur.
-- Mempermudah pengelolaan cabang yang terus bertambah.
-- Menghilangkan proses rekap manual yang memakan waktu dan rawan error.
+## 🌟 Fitur Utama
 
+Sistem ini dikembangkan untuk memberikan kemudahan bagi HR dan Operasional melalui fitur-fitur berikut:
 
-## Fitur Utama
-### Manajemen Karyawan
-- Input dan pengelolaan data karyawan.
-- Pengaturan kontrak kerja.
-- Penentuan shift kerja.
-- Penempatan cabang.
+### 1. Dashboard Monitoring Berbasis Cabang
+- Ringkasan data kehadiran harian per cabang (Sorrento, Downtown, dll).
+- Status koneksi mesin absensi secara *real-time*.
+- Statistik keterlambatan dan jumlah karyawan aktif.
 
+### 2. Manajemen Karyawan Terpadu
+- Pengelolaan profil lengkap karyawan.
+- Pengaturan shift kerja dinamis (Mendukung shift malam).
+- Monitoring masa kontrak dan penempatan cabang.
 
-### Sistem Absensi
-- Integrasi mesin fingerprint (Solution / ZKTeco via ADMS).
-- Dukungan input manual jika terjadi kendala mesin.
-- Validasi data check-in dan check-out.
+### 3. Sistem Absensi Otomatis (ADMS)
+- Integrasi langsung dengan mesin fingerprint (Solution/ZKTeco) menggunakan protokol PUSH SDK (ADMS).
+- Sinkronisasi data otomatis tanpa perlu download log manual dari mesin.
+- Deteksi cerdas status Check-in vs Check-out berdasarkan jam kerja.
 
+### 4. Pelaporan Profesional
+- Kalkulasi otomatis jam lembur dan menit keterlambatan.
+- Laporan bulanan mendalam yang dapat difilter berdasarkan tanggal dan cabang.
+- Ekspor laporan langsung ke format Excel (.xlsx) siap cetak.
 
-### Laporan & Perhitungan Otomatis
-- Perhitungan keterlambatan berbasis shift.
-- Perhitungan lembur berbasis jam shift selesai.
-- Rekap absensi bulanan.
-- Export laporan ke Excel.
+---
 
+## 🛠️ Stack Teknologi
 
-### Monitoring Mesin
-- Status mesin absensi (online / offline).
-- Monitoring dari dashboard pusat.
+Dibuat dengan pondasi yang ringan namun kuat untuk performa maksimal:
+- **Backend:** Python 3.10 (Flask) + Gunicorn
+- **Database:** MySQL 8.0
+- **Frontend:** Vanilla HTML5, CSS3, & Modern JavaScript (ES6+)
+- **Reverse Proxy:** Nginx
+- **Containerization:** Docker & Docker Compose
+- **Security:** Secret key encryption, Environment variables, & Cloudflare Tunnel support.
 
+---
 
-## Arsitektur & Tech Stack
-Dirancang sederhana, ringan, dan mudah dikelola oleh tim internal.
-- Backend: Python (Flask) + MySQL
-- Frontend: HTML, CSS, JavaScript (tanpa framework berat)
-- Deployment: Dockerized
-- Reverse Proxy: Nginx
-- Remote Access: Cloudflare Tunnel
-Fokus utama adalah stabilitas, kemudahan maintenance, dan efisiensi resource server.
+## 🚀 Panduan Instalasi & Deployment
 
+Ikuti langkah-langkah berikut untuk menjalankan sistem di lingkungan server atau lokal Anda:
 
-## Cara Menjalankan (Development)
-- Pastikan Docker sudah terpasang, kemudian:
-- Salin file .env.example menjadi .env.
-- Sesuaikan konfigurasi database dan environment.
-- Jalankan:
+### 1. Persiapan Environment
+Clone repositori ini dan masuk ke direktori project:
+```bash
+git clone https://github.com/username/hris-website.git
+cd hris-website
+```
+
+### 2. Konfigurasi Variabel Lingkungan
+Buat file `.env` di direktori root dan sesuaikan nilainya:
+```env
+# Database
+DB_HOST=db
+DB_NAME=hris
+DB_USER=admin_user
+DB_PASSWORD=your_secure_password
+DB_ROOT_PASSWORD=your_root_password
+DB_PORT=3306
+
+# Security
+SECRET_KEY=isi_dengan_string_random_panjang
+APP_DOMAIN=hris.perusahaananda.com
+
+# Cloudflare (Opsional)
+CLOUDFLARE_TUNNEL_TOKEN=token_tunnel_anda
+```
+
+### 3. Jalankan dengan Docker Compose
+Pastikan Docker dan Docker Compose sudah terinstall. Jalankan perintah berikut:
+```bash
 docker-compose up -d --build
-- Akses melalui:
-http://localhost
+```
 
+### 4. Inisialisasi Database
+Setelah container berjalan, jalankan script inisialisasi untuk membuat tabel dan user admin pertama:
+```bash
+docker-compose exec app python backend/init_db.py
+```
+*Username default: `admin` | Password default: `admin123`*
 
-## Integrasi Mesin Absensi (ADMS)
-Untuk menghubungkan mesin fingerprint:
-- Server Address: arahkan ke IP server HRIS.
-- Push URL: http://<ip-server>/iclock/cdata
-- Port default: 80
-Pastikan server dapat diakses oleh mesin dalam jaringan yang sama atau melalui tunnel yang sudah dikonfigurasi.
+---
 
+## 📸 Gambaran Antarmuka
 
-## Pengembangan Internal
-Sistem ini dikembangkan secara internal untuk mendukung kebutuhan operasional RotiKebanggaan yang memiliki beberapa cabang dan terus berkembang.
-Tujuan utama:
-mengurangi beban kerja manual HR, meningkatkan akurasi data, dan mempermudah proses monitoring lintas cabang.
+Berikut adalah struktur visual sistem:
 
+| Halaman | Deskripsi |
+| :--- | :--- |
+| **Login Page** | Keamanan akses dengan latar belakang kustom dan responsif. |
+| **Main Dashboard** | Menampilkan statistik cepat, status mesin, dan navigasi utama. |
+| **Employee List** | Tabel interaktif untuk edit, hapus, dan tambah karyawan baru. |
+| **Attendance Logs** | Riwayat mentah dari mesin beserta status deteksi otomatis. |
+| **Monthly Report** | Ringkasan produktivitas, lembur, dan keterlambatan per periode. |
 
-## Pengembang
-Dikembangkan secara internal oleh: DnnTech
-RotiKebanggaan IT Division – 2026
+*(Anda dapat menyematkan screenshot di sini untuk mempercantik tampilan repositori)*
+
+---
+
+## 🔌 Integrasi Mesin Fingerprint (ADMS)
+
+Untuk menghubungkan mesin fingerprint Anda ke sistem ini:
+1. Masuk ke menu **COMM/Network** di mesin.
+2. Cari pengaturan **ADMS / Cloud Server**.
+3. Masukkan **Server Address**: `http://domain-anda.com` (atau IP Server).
+4. Masukkan **Server Port**: `80`.
+5. Aktifkan fitur **Enable Proxy Server** jika diperlukan.
+
+---
+
+## 📄 Lisensi & Pengembang
+
+Dikembangkan dengan dedikasi untuk efisiensi operasional.
+**IT Division - HRIS Project**
+© 2026 
