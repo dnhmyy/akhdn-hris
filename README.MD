@@ -1,22 +1,24 @@
-# HRIS - Employee & Attendance Management System
+# RotiKebanggaan HRIS
 
-Sistem Informasi Manajemen Sumber Daya Manusia (HRIS) yang dirancang untuk mengelola data karyawan dan absensi secara efisien, terintegrasi dengan mesin fingerprint, serta mendukung operasional multi-cabang.
+Sistem HRIS internal yang dikembangkan untuk mendukung operasional RotiKebanggaan, khususnya dalam pengelolaan data karyawan dan absensi multi-cabang. Sistem ini dibuat untuk mengurangi proses rekap manual, meminimalkan kesalahan perhitungan, serta mempercepat proses monitoring dan pelaporan kehadiran karyawan.
 
----
+## Tujuan Pengembangan
 
-## 🌟 Fitur Utama
+**HRIS ini dikembangkan secara internal untuk:**
+- Mengelola data karyawan secara terpusat.
+- Mengintegrasikan mesin absensi fingerprint langsung ke sistem.
+- Mengotomatisasi perhitungan keterlambatan dan lembur.
+- Mempermudah pengelolaan cabang yang terus bertambah.
+- Menghilangkan proses rekap manual yang memakan waktu dan rawan error.
 
-Sistem ini dikembangkan untuk memberikan kemudahan bagi HR dan Operasional melalui fitur-fitur berikut:
 
-### 1. Dashboard Monitoring Berbasis Cabang
-- Ringkasan data kehadiran harian per cabang (Sorrento, Downtown, dll).
-- Status koneksi mesin absensi secara *real-time*.
-- Statistik keterlambatan dan jumlah karyawan aktif.
+## Fitur Utama
+### Manajemen Karyawan
+- Input dan pengelolaan data karyawan.
+- Pengaturan kontrak kerja.
+- Penentuan shift kerja.
+- Penempatan cabang.
 
-### 2. Manajemen Karyawan Terpadu
-- Pengelolaan profil lengkap karyawan.
-- Pengaturan shift kerja dinamis (Mendukung shift malam).
-- Monitoring masa kontrak dan penempatan cabang.
 
 ### 3. Sistem Absensi Otomatis (ADMS)
 - Integrasi langsung dengan mesin fingerprint (Solution/ZKTeco) menggunakan protokol PUSH SDK (ADMS).
@@ -30,7 +32,7 @@ Sistem ini dikembangkan untuk memberikan kemudahan bagi HR dan Operasional melal
 
 ---
 
-## 🛠️ Stack Teknologi
+## Stack Teknologi
 
 Dibuat dengan pondasi yang ringan namun kuat untuk performa maksimal:
 - **Backend:** Python 3.10 (Flask) + Gunicorn
@@ -42,7 +44,7 @@ Dibuat dengan pondasi yang ringan namun kuat untuk performa maksimal:
 
 ---
 
-## 🚀 Panduan Instalasi & Deployment
+## Panduan Instalasi & Deployment
 
 Ikuti langkah-langkah berikut untuk menjalankan sistem di lingkungan server atau lokal Anda:
 
@@ -65,12 +67,16 @@ DB_ROOT_PASSWORD=your_root_password
 DB_PORT=3306
 
 # Security
-SECRET_KEY=isi_dengan_string_random_panjang
-APP_DOMAIN=hris.perusahaananda.com
+SECRET_KEY=isi_dengan_string_flask_secret_key
+APP_DOMAIN=yourdomain.com
 
 # Cloudflare (Opsional)
 CLOUDFLARE_TUNNEL_TOKEN=token_tunnel_anda
 ```
+
+> [!TIP]
+> **Cara generat SECRET_KEY:** Jalankan perintah ini di terminal Anda:  
+> `python3 -c 'import secrets; print(secrets.token_hex(32))'`
 
 ### 3. Jalankan dengan Docker Compose
 Pastikan Docker dan Docker Compose sudah terinstall. Jalankan perintah berikut:
@@ -85,9 +91,14 @@ docker-compose exec app python backend/init_db.py
 ```
 *Username default: `admin` | Password default: `admin123`*
 
+### 5. Data Dummy & Testing (Opsional)
+Jika Anda ingin mencoba sistem dengan data simulasi (60+ karyawan & riwayat absensi), gunakan file SQL yang tersedia di folder `backend/`:
+- **`seed_data.sql`**: Import file ini ke phpMyAdmin atau jalankan di MySQL untuk mengisi data dummy.
+- **`cleanup_data.sql`**: Jalankan file ini jika ingin menghapus seluruh data dummy dari sistem.
+
 ---
 
-## 📸 Gambaran Antarmuka
+## Gambaran Antarmuka
 
 Berikut adalah struktur visual sistem:
 
@@ -103,7 +114,7 @@ Berikut adalah struktur visual sistem:
 
 ---
 
-## 🔌 Integrasi Mesin Fingerprint (ADMS)
+## Integrasi Mesin Fingerprint (ADMS)
 
 Untuk menghubungkan mesin fingerprint Anda ke sistem ini:
 1. Masuk ke menu **COMM/Network** di mesin.
@@ -114,8 +125,9 @@ Untuk menghubungkan mesin fingerprint Anda ke sistem ini:
 
 ---
 
-## 📄 Lisensi & Pengembang
+## Lisensi & Pengembang
 
 Dikembangkan dengan dedikasi untuk efisiensi operasional.
-**IT Division - HRIS Project**
+**IT Division - HRIS Project - DnnTech**
 © 2026 
+-
