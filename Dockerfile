@@ -19,6 +19,10 @@ RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
 
 COPY . .
 
+# Create a non-root user and change ownership
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
 # Expose the Flask port
 EXPOSE 5000
 
