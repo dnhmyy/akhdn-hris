@@ -1,15 +1,17 @@
 # RotiKebanggaan HRIS
 
-Sistem HRIS internal yang dikembangkan untuk mendukung operasional RotiKebanggaan, khususnya dalam pengelolaan data karyawan dan absensi multi-cabang. Sistem ini dibuat untuk mengurangi proses rekap manual, meminimalkan kesalahan perhitungan, serta mempercepat proses monitoring dan pelaporan kehadiran karyawan.
+Sistem Informasi Manajemen Sumber Daya Manusia (HRIS) yang dirancang untuk mengelola data karyawan dan absensi secara efisien, terintegrasi dengan mesin fingerprint, serta mendukung operasional multi-cabang.
 
-## Tujuan Pengembangan
+---
 
-**HRIS ini dikembangkan secara internal untuk:**
-- Mengelola data karyawan secara terpusat.
-- Mengintegrasikan mesin absensi fingerprint langsung ke sistem.
-- Mengotomatisasi perhitungan keterlambatan dan lembur.
-- Mempermudah pengelolaan cabang yang terus bertambah.
-- Menghilangkan proses rekap manual yang memakan waktu dan rawan error.
+## 🌟 Fitur Utama
+
+Sistem ini dikembangkan untuk memberikan kemudahan bagi HR dan Operasional melalui fitur-fitur berikut:
+
+### 1. Dashboard Monitoring Berbasis Cabang
+- Ringkasan data kehadiran harian per cabang (Sorrento, Downtown, dll).
+- Status koneksi mesin absensi secara *real-time*.
+- Statistik keterlambatan dan jumlah karyawan aktif.
 
 
 ## Fitur Utama
