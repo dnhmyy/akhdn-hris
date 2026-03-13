@@ -4,7 +4,7 @@ Sistem Informasi Manajemen Sumber Daya Manusia (HRIS) yang dirancang untuk menge
 
 ---
 
-## 🌟 Fitur Utama
+## Fitur Utama
 
 Sistem ini dikembangkan untuk memberikan kemudahan bagi HR dan Operasional melalui fitur-fitur berikut:
 
@@ -42,7 +42,7 @@ Dibuat dengan pondasi yang ringan namun kuat untuk performa maksimal:
 
 ---
 
-## 🚀 Panduan Instalasi & Deployment
+## Panduan Instalasi & Deployment
 
 Ikuti langkah-langkah berikut untuk menjalankan sistem di lingkungan server atau lokal Anda:
 
@@ -87,7 +87,7 @@ docker-compose exec app python backend/init_db.py
 
 ---
 
-## 📸 Gambaran Antarmuka
+## Gambaran Antarmuka
 
 Berikut adalah struktur visual sistem:
 
@@ -103,7 +103,7 @@ Berikut adalah struktur visual sistem:
 
 ---
 
-## 🔌 Integrasi Mesin Fingerprint (ADMS)
+## Integrasi Mesin Fingerprint (ADMS)
 
 Untuk menghubungkan mesin fingerprint Anda ke sistem ini:
 1. Masuk ke menu **COMM/Network** di mesin.
@@ -114,8 +114,8 @@ Untuk menghubungkan mesin fingerprint Anda ke sistem ini:
 
 ---
 
-## 📄 Lisensi & Pengembang
+## Lisensi & Pengembang
 
 Dikembangkan dengan dedikasi untuk efisiensi operasional.
-**IT Division - HRIS Project**
+**IT Division - HRIS Project - DnnTech**
 © 2026 
